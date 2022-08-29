@@ -1,0 +1,2 @@
+[console_scripts]
+saq = saq.__main__:main

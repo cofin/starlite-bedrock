@@ -1,0 +1,3 @@
+[mkdocs.plugins]
+gen-files=mkdocs_gen_files.plugin:GenFilesPlugin
+

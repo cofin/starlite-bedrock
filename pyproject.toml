@@ -1,0 +1,88 @@
+[tool.poetry]
+name = "starlite-lib"
+version = "0.0.1"
+description = "Starlite API and async worker boilerplate"
+authors = ["Peter Schutt <peter.github@proton.me>"]
+packages = [{ include = "starlite_lib", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+asyncpg = "*"
+httpx = "*"
+orjson = "*"
+pydantic = "*"
+redis = "*"
+saq = {version = "*", extras = ["hiredis"]}
+sentry-sdk = "*"
+sqlalchemy = { git = "https://github.com/sqlalchemy/sqlalchemy.git", branch = "main" }
+starlite = {extras = ["picologging","brotli"], version = "*"}
+starlite-jwt = { extras = [], version = "*"}
+
+
+[tool.poetry.dev-dependencies]
+black = "*"
+coverage = {extras = ["toml"], version = "*"}
+flake8 = "*"
+flake8-type-checking = "*"
+flake8-bugbear = "*"
+flake8-comprehensions = "*"
+flake8-mutable = "*"
+flake8-print = "*"
+flake8-simplify = "*"
+slotscheck = "*"
+types-freezegun = "*"
+isort = "*"
+mkdocs-gen-files = "*"
+mkdocs-literate-nav = "*"
+mkdocs-material = "*"
+mkdocs-section-index = "*"
+mkdocstrings = {version = "*", extras = ["python"]}
+mypy = "*"
+pymdown-extensions = "*"
+pytest = "*"
+pytest-asyncio = "*"
+pytest-cov = "*"
+pytest-dotenv = "*"
+starlite = { extras = ["testing"], version = "*" }
+sqlalchemy2-stubs = "*"
+types-redis = "*"
+types-pyyaml = "*"
+types-python-jose = "*"
+pre-commit = "*"
+
+[build-system]
+requires = ["poetry-core>=1.0.0","cython"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+
+[tool.isort]
+profile = "black"
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    'if TYPE_CHECKING:',
+    'pragma: no cover',
+]
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+]
+
+[tool.mypy]
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+show_error_codes = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unused_ignores = true
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+addopts = "--cov=starlite_lib -v --doctest-modules --doctest-glob=*.md --envfile=tests.env"
+asyncio_mode = "auto"

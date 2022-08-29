@@ -1,0 +1,3 @@
+[flake8.extension]
+TC=flake8_type_checking.plugin:Plugin
+
