@@ -2,7 +2,7 @@
 .ONESHELL:
 ENV_PREFIX=$(shell python3 -c "if __import__('pathlib').Path('.venv/bin/pip').exists(): print('.venv/bin/')")
 USING_POETRY=$(shell grep "tool.poetry" pyproject.toml && echo "yes")
-USING_DOCKER=$(shell grep "OPDBA_USE_DOCKER=true" .env && echo "yes")
+USING_DOCKER=$(shell grep "USE_DOCKER=true" .env && echo "yes")
 PYTHON_PACKAGES=$(shell poetry export -f requirements.txt  --without-hashes |cut -d'=' -f1 |cut -d ' ' -f1)
 GRPC_PYTHON_BUILD_SYSTEM_ZLIB=true
 
