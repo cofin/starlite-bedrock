@@ -1,15 +1,15 @@
-<img src="https://www.topsport.com.au/assets/images/logo_pulse.svg" width="200"/>
 
-# starlite-lib
+# starlite-foundations
 
-Starlite API boilerplate abstraction and utilities.
+Opinionated Starlite API boilerplate abstraction and utilities. 
+
+Based on the work from @petershutt[https://github.com/peterschutt]
 
 ### TODO
 
 - [ ] CI/CD setup
 - [ ] Development environment and instructions
 - [ ] More tests and examples
-- [ ] Pattern for versioned documentation ([mike](https://github.com/jimporter/mike) and 
-[lambda-powertools gh action](https://github.com/awslabs/aws-lambda-powertools-python/blob/develop/.github/workflows/python_docs.yml)
+- [ ] Pattern for versioned documentation
 - [ ] gh-pages site for docs 
  

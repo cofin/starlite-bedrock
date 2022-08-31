@@ -1,4 +1,4 @@
-from starlite_lib.starlite import Starlite, get
+from starlite_bedrock.starlite import Starlite, get
 
 
 @get("/example")

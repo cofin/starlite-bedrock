@@ -1,4 +1,4 @@
-# starlite-lib
+# starlite-bedrock
 
 An opinionated starlite api configuration library.
 

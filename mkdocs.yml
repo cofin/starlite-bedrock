@@ -1,10 +1,10 @@
-site_name: starlite-lib
-repo_url: https://github.com/topsport-com-au/starlite-lib
+site_name: starlite-bedrock
+repo_url: https://github.com/cofin/starlite-bedrock
 nav:
   - index.md
   - Reference: reference/
 watch:
-  - src/starlite_lib
+  - src/starlite_bedrock
 theme:
   name: material
   features:
@@ -49,10 +49,10 @@ plugins:
         python:
           paths: [src]
           import:
-          - https://docs.python.org/3/objects.inv
-          - https://docs.sqlalchemy.org/en/20/objects.inv
-          - https://redis-py.readthedocs.io/en/stable/objects.inv
-          - https://starlite-api.github.io/starlite/objects.inv
+            - https://docs.python.org/3/objects.inv
+            - https://docs.sqlalchemy.org/en/20/objects.inv
+            - https://redis-py.readthedocs.io/en/stable/objects.inv
+            - https://starlite-api.github.io/starlite/objects.inv
           options:
             docstring_style: numpy
             docstring_options:
