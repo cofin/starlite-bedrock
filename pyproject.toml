@@ -1,0 +1,105 @@
+[tool.poetry]
+name = "starlite-bedrock"
+version = "0.0.1"
+description = "Opinionated Starlite API and async worker boilerplate"
+authors = ["Cody Fincher <codyfincher@google.com>"]
+packages = [{ include = "starlite_bedrock", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+starlite = { git = "https://github.com/starlite-api/starlite.git", branch = "main", extras = ["brotli","picologging"]}
+starlite-jwt = { git = "https://github.com/starlite-api/starlite-jwt.git", branch = "main" }
+starlette = "*"
+httpx = "*"
+orjson = "*"
+pydantic =  { extras = ["email","dotenv"], version = "*"}
+saq = {version = "*", extras = ["hiredis"]}
+sqlalchemy = { git = "https://github.com/sqlalchemy/sqlalchemy.git", branch = "main" }
+alembic = "*"
+greenlet = "*"
+anyio = "*"
+structlog = "*"
+typer = "*"
+rich = "*"
+uvicorn =  { extras = ["standard"], version = "*"}
+gunicorn = "*"
+redis = "*"
+hiredis = "*"
+asyncpg = "*"
+oracledb = { version = "*", optional = true }
+google-api-core = { version = "*", optional = true }
+google-cloud-secret-manager = { version = "*", optional = true }
+
+[tool.poetry.dev-dependencies]
+mypy = "*"
+black = "*"
+blacken-docs ="*"
+isort = "*"
+coverage = {extras = ["toml"], version = "*"}
+flake8 = "*"
+flake8-type-checking = "*"
+flake8-bugbear = "*"
+flake8-comprehensions = "*"
+flake8-mutable = "*"
+flake8-print = "*"
+flake8-simplify = "*"
+slotscheck = "*"
+types-freezegun = "*"
+types-redis = "*"
+types-pyyaml = "*"
+types-python-jose = "*"
+asyncpg-stubs = "*"
+mkdocs-gen-files = "*"
+mkdocs-literate-nav = "*"
+mkdocs-material = "*"
+mkdocs-section-index = "*"
+mkdocstrings = {version = "*", extras = ["python"]}
+pymdown-extensions = "*"
+pytest = "*"
+pytest-asyncio = "*"
+pytest-cov = "*"
+pytest-dotenv = "*"
+pytest-mock = "*"
+pre-commit = "*"
+pylint = "*"
+pyupgrade = "*"
+bandit = "*"
+bump2version = "*"
+
+[tool.poetry.extras]
+gcp = ["google-api-core","google-cloud-secret-manager"]
+oracle = ["oracledb"]
+
+[build-system]
+requires = ["poetry-core>=1.0.0","cython"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 120
+
+[tool.isort]
+profile = "black"
+overwrite_in_place = true
+multi_line_output = 3
+
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    'if TYPE_CHECKING:',
+    'pragma: no cover',
+]
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+]
+
+
+[tool.pytest.ini_options]
+addopts = "--cov=starlite_bedrock -v --doctest-modules --doctest-glob=*.md --envfile=tests.env"
+asyncio_mode = "auto"
+env_files = [".env"]
+testpaths = [
+    "tests",
+]
