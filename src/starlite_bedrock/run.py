@@ -1,12 +1,12 @@
 """Application Web Server Gateway Interface - gunicorn."""
 import asyncio
 import os
-import pkgutil
 import signal
 import sys
 import threading
 import time
-from typing import Any, cast
+from functools import lru_cache
+from typing import TYPE_CHECKING, Any, cast
 
 from gunicorn.app.base import Application
 from gunicorn.arbiter import Arbiter
@@ -14,32 +14,8 @@ from starlite.utils.module_loading import import_string
 from uvicorn.main import Server
 from uvicorn.workers import UvicornWorker as _UvicornWorker
 
-from starlite_bedrock.config import app_settings, uvicorn_settings
-from starlite_bedrock.starlite import Starlite
-
-
-def get_app(import_path: str) -> "Starlite":
-    return cast("Starlite", import_string(import_path))
-
-
-def run_asgi(
-    host: str,
-    port: int,
-    http_workers: int,
-    reload: bool,
-) -> None:
-    import uvicorn  # pylint: disable=[import-outside-toplevel]
-
-    uvicorn.run(
-        uvicorn_settings.ASGI_APP,
-        host=host,
-        port=port,
-        log_level=uvicorn_settings.LOG_LEVEL,
-        reload=reload,
-        lifespan="auto",
-        access_log=True,
-        workers=http_workers,
-    )
+if TYPE_CHECKING:
+    from starlite import Starlite
 
 
 class ReloaderThread(threading.Thread):
@@ -115,6 +91,7 @@ class ApplicationLoader(Application):  # type: ignore
         options: dict[str, Any] | None = None,
     ):
         self.options = options or {}
+        self.asgi_application: "Starlite" = self.options.pop("asgi_application", None)
         self.config_path = self.options.pop("config", None)
         super().__init__()
 
@@ -132,9 +109,50 @@ class ApplicationLoader(Application):  # type: ignore
         for key, value in config.items():
             self.cfg.set(key.lower(), value)
 
-    def load(self) -> Starlite:
+    def load(self) -> "Starlite":
         """Load application."""
-        return get_app(uvicorn_settings.ASGI_APP)
+        return get_app(self.asgi_application)
+
+
+@lru_cache()
+def get_app(import_path: str) -> "Starlite":
+    return cast("Starlite", import_string(import_path))
+
+
+def run_asgi(
+    host: str,
+    port: int,
+    http_workers: int,
+    reload: bool,
+    log_level: str,
+    app: str,
+    lifespan: str = "auto",
+    access_log: bool = True,
+) -> None:
+    """Launches an ASGI application with Uvicorn
+
+    Args:
+        host (str): _description_
+        port (int): _description_
+        http_workers (int): _description_
+        reload (bool): _description_
+        log_level (str): _description_
+        app (str): _description_
+        lifespan (str, optional): _description_. Defaults to "auto".
+        access_log (bool, optional): _description_. Defaults to True.
+    """
+    import uvicorn  # pylint: disable=[import-outside-toplevel]
+
+    uvicorn.run(
+        app=app,
+        host=host,
+        port=port,
+        log_level=log_level,
+        reload=reload,
+        lifespan=lifespan,
+        access_log=access_log,
+        workers=http_workers,
+    )
 
 
 def run_wsgi(
@@ -142,8 +160,17 @@ def run_wsgi(
     port: int,
     http_workers: int,
     reload: bool,
+    log_level: str,
+    app: str,
+    gunicorn_conf_path: str,
 ) -> None:
     """Run gunicorn WSGI with ASGI workers."""
+    sys.argv = [
+        "--gunicorn",
+    ]
+    if reload:
+        sys.argv.append("-r")
+    sys.argv.append(app)
 
     ApplicationLoader(
         options={
@@ -151,7 +178,7 @@ def run_wsgi(
             "workers": str(http_workers),
             "port": str(port),
             "reload": reload,
-            "loglevel": app_settings.LOG_LEVEL,
-            "config": pkgutil.get_loader("starlite_bedrock.utils.gunicorn").path,  # type: ignore
+            "loglevel": log_level,
+            "config": gunicorn_conf_path,
         },
     ).run()

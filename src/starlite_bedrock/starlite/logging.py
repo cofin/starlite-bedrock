@@ -7,8 +7,6 @@ import picologging
 from starlette.status import HTTP_200_OK
 from starlite import LoggingConfig
 
-from starlite_bedrock.config import api_settings, app_settings
-
 
 class AccessLogFilter(logging.Filter):
     """
@@ -39,17 +37,15 @@ class AccessLogFilter(logging.Filter):
 
 
 log_config = LoggingConfig(
-    root={"level": app_settings.LOG_LEVEL, "handlers": ["queue_listener"]},
     filters={
         "health_filter": {
             "()": AccessLogFilter,
-            "path_re": f"^{api_settings.HEALTH_PATH}$",
+            "path_re": "^/health$",
         }
     },
     handlers={
         "console": {
             "class": "picologging.StreamHandler",
-            "level": app_settings.LOG_LEVEL,
             "formatter": "standard",
         },
         "queue_listener": {

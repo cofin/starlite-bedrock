@@ -122,7 +122,11 @@ class BaseModelSchema(BaseSchema):
 
 
 class BaseSettings(_BaseSettings):
+    """Base Settings"""
+
     class Config:
+        """Base Settings Config"""
+
         json_loads = deserialize_object
         json_dumps = serialize_object
         case_sensitive = True

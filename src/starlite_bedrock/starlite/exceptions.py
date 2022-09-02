@@ -70,7 +70,7 @@ class HTTPExceptionMixin:
     Mixin class for configuring repository objects to raise errors that return an HTTP response.
 
     Ensure to mixin such that this overwrites the class attributes on
-    [`repository.Base`][starlite.contrib.bedrock.repository.Base]:
+    [`repository.Base`][starlite_bedrock.repository.Base]:
 
     ```python
     from starlite_bedrock import repository

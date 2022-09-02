@@ -33,9 +33,7 @@ from typing import (
     Awaitable,
     Callable,
     Coroutine,
-    Dict,
     Generic,
-    List,
     Optional,
     TypeVar,
     Union,
@@ -52,8 +50,8 @@ else:
     from typing_extensions import ParamSpec
 
 
-T_Retval = TypeVar("T_Retval")
-T_ParamSpec = ParamSpec("T_ParamSpec")
+T_Retval = TypeVar("T_Retval")  # pylint: disable=[invalid-name]
+T_ParamSpec = ParamSpec("T_ParamSpec")  # pylint: disable=[invalid-name]
 T = TypeVar("T")
 
 

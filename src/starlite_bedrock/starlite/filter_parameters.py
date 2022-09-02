@@ -3,13 +3,14 @@ from typing import TYPE_CHECKING
 
 from starlite import Parameter
 
-from starlite_bedrock.config import api_settings
 from starlite_bedrock.repository import BeforeAfter, CollectionFilter, LimitOffset
 
 if TYPE_CHECKING:
     from uuid import UUID
 
 DTorNone = datetime | None
+
+DEFAULT_PAGINATION_SIZE: int = 20
 
 
 def id_filter(
@@ -44,7 +45,7 @@ def created_filter(
     after : datetime | None
         Filter for records updated after this date/time.
     """
-    return BeforeAfter("created_date", before, after)
+    return BeforeAfter("created_at", before, after)
 
 
 def updated_filter(
@@ -60,7 +61,7 @@ def updated_filter(
     after : datetime | None
         Filter for records updated after this date/time.
     """
-    return BeforeAfter("updated_date", before, after)
+    return BeforeAfter("updated_at", before, after)
 
 
 def limit_offset_pagination(
@@ -68,7 +69,7 @@ def limit_offset_pagination(
     page_size: int = Parameter(
         query="page-size",
         ge=1,
-        default=api_settings.DEFAULT_PAGINATION_LIMIT,
+        default=20,
         required=False,
     ),
 ) -> LimitOffset:

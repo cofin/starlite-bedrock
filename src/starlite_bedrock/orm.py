@@ -129,9 +129,11 @@ class ExpiresAtMixin:
 
 
 M = TypeVar("M", bound=BaseModel)
-M_UUID = TypeVar("M_UUID", bound=GUIDModelMixin)  # pylint: disable=[invalid-name]
-M_CREATED_UPDATED_AT = TypeVar("M_CREATED_UPDATED_AT", bound=CreatedUpdatedAtMixin)  # pylint: disable=[invalid-name]
-M_EXPIRES_AT = TypeVar("M_EXPIRES_AT", bound=ExpiresAtMixin)  # pylint: disable=[invalid-name]
+M_GuidModel = TypeVar("M_GuidModel", bound=GUIDModelMixin)  # pylint: disable=[invalid-name]
+M_CreatedUpdatedAtModel = TypeVar(  # pylint: disable=[invalid-name]
+    "M_CreatedUpdatedAtModel", bound=CreatedUpdatedAtMixin
+)
+M_ExpiresAtModel = TypeVar("M_ExpiresAtModel", bound=ExpiresAtMixin)  # pylint: disable=[invalid-name]
 
 
 def find_by_table_name(table_name: str) -> Optional["BaseModel"]:

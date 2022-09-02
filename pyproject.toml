@@ -5,6 +5,9 @@ description = "Opinionated Starlite API and async worker boilerplate"
 authors = ["Cody Fincher <codyfincher@google.com>"]
 packages = [{ include = "starlite_bedrock", from = "src" }]
 
+[tool.poetry.scripts]
+starlite = "starlite_bedrock:main"
+
 [tool.poetry.dependencies]
 python = "^3.10"
 starlite = { git = "https://github.com/starlite-api/starlite.git", branch = "main", extras = ["brotli","picologging"]}
