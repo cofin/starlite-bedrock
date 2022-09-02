@@ -53,6 +53,18 @@ def endpoint(cls_: Any = None, base_url: Any = None) -> Any:
 
 
 def _process_class(cls: Any, base_url: Any) -> Any:
+    """_summary_
+
+    Args:
+        cls (Any): _description_
+        base_url (Any): _description_
+
+    Raises:
+        RuntimeError: _description_
+
+    Returns:
+        Any: _description_
+    """
     if base_url is None:
         raise RuntimeError("A decorated endpoint must define a base_url as " "@endpoint(base_url='https://foo.com').")
     else:

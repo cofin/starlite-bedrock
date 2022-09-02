@@ -10,7 +10,7 @@ def configure() -> None:
     """
     sentry_settings = SentrySettings()
     try:
-        import sentry_sdk  # pylint: disable=[import-outside-toplevel]
+        import sentry_sdk  # pylint: disable=[import-outside-toplevel] # pylance: ignore=[reportMissingImports]
         from sentry_sdk.integrations.sqlalchemy import (  # pylint: disable=[import-outside-toplevel]
             SqlalchemyIntegration,
         )

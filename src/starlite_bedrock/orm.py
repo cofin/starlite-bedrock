@@ -1,7 +1,7 @@
 import functools
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Any, Dict, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Optional, TypeVar
 
 from sqlalchemy import Column, MetaData
 from sqlalchemy.dialects import postgresql as pg
@@ -59,15 +59,15 @@ class BaseModel(DeclarativeBase):
     # triggering an expired load
     __mapper_args__ = {"eager_defaults": True}
 
-    def from_dict(self, dict: Dict[str, Any]) -> "BaseModel":
+    def from_dict(self, **kwargs: Any) -> "BaseModel":
         """Return ORM Object from Dictionary"""
         if self.__table__:
             for column in self.__table__.columns:
-                if column.name in dict:
-                    setattr(self, column.name, dict.get(column.name))
+                if column.name in kwargs:
+                    setattr(self, column.name, kwargs.get(column.name))
         return self
 
-    def dict(self) -> dict:
+    def dict(self) -> dict[str, Any]:
         """Returns a dict representation of a model."""
         if self.__table__:
             return {field.name: getattr(self, field.name) for field in self.__table__.columns}
@@ -79,7 +79,7 @@ class GUIDModelMixin:
     """GUID Column Mixin"""
 
     id: Mapped["UUID4"] = Column(GUID, primary_key=True, default=uuid.uuid4)
-    id._creation_order = 1  # type: ignore[protected-access,attr-defined]
+    id._creation_order = 1  # type: ignore[attr-defined] # pylint: disable=[protected-access]
 
 
 @declarative_mixin
@@ -94,7 +94,7 @@ class CreatedUpdatedAtMixin:
         server_default=sql_func.now(),
         comment="Date the record was inserted",
     )
-    created_at._creation_order = 9998  # type: ignore[protected-access,attr-defined]
+    created_at._creation_order = 9998  # type: ignore[attr-defined] # pylint: disable=[protected-access]
     updated_at: Mapped[datetime] = Column(
         DateTime(timezone=True),
         nullable=True,
@@ -102,7 +102,7 @@ class CreatedUpdatedAtMixin:
         server_default=None,
         comment="Date the record was last modified",
     )
-    updated_at._creation_order = 9998  # type: ignore[protected-access,attr-defined]
+    updated_at._creation_order = 9998  # type: ignore[attr-defined] # pylint: disable=[protected-access]
 
 
 def _get_default_expires_at(timedelta_seconds: int) -> datetime:
@@ -116,7 +116,7 @@ class ExpiresAtMixin:
     __lifetime_seconds__: int = 3600
 
     @declared_attr
-    def expires_at(cls) -> Column[DateTime]:
+    def expires_at(cls) -> Column[DateTime]:  # pylint: disable=[no-self-argument]
         return Column(
             DateTime(timezone=True),
             nullable=False,
@@ -129,9 +129,9 @@ class ExpiresAtMixin:
 
 
 M = TypeVar("M", bound=BaseModel)
-M_UUID = TypeVar("M_UUID", bound=GUIDModelMixin)
-M_CREATED_UPDATED_AT = TypeVar("M_CREATED_UPDATED_AT", bound=CreatedUpdatedAtMixin)
-M_EXPIRES_AT = TypeVar("M_EXPIRES_AT", bound=ExpiresAtMixin)
+M_UUID = TypeVar("M_UUID", bound=GUIDModelMixin)  # pylint: disable=[invalid-name]
+M_CREATED_UPDATED_AT = TypeVar("M_CREATED_UPDATED_AT", bound=CreatedUpdatedAtMixin)  # pylint: disable=[invalid-name]
+M_EXPIRES_AT = TypeVar("M_EXPIRES_AT", bound=ExpiresAtMixin)  # pylint: disable=[invalid-name]
 
 
 def find_by_table_name(table_name: str) -> Optional["BaseModel"]:

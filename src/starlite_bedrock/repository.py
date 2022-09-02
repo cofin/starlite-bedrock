@@ -24,15 +24,15 @@ __all__ = [
     "RepositoryNotFoundException",
     "RepositoryConflictException",
     "RepositoryException",
-    "T_base",
-    "T_model",
+    "T_BASE",
+    "T_MODEL",
 ]
 
 T = TypeVar("T")
-T_row = TypeVar("T_row", bound=tuple[Any, ...])  # pylint: disable=[invalid-name]
-T_model = TypeVar("T_model", bound=orm.BaseModel)  # pylint: disable=[invalid-name]
-T_base = TypeVar("T_base", bound=orm.BaseModel)  # pylint: disable=[invalid-name]
-T_param = TypeVar("T_param", bound=float | str | UUID)  # pylint: disable=[invalid-name]
+T_ROW = TypeVar("T_ROW", bound=tuple[Any, ...])  # pylint: disable=[invalid-name]
+T_MODEL = TypeVar("T_MODEL", bound=orm.BaseModel)  # pylint: disable=[invalid-name]
+T_BASE = TypeVar("T_BASE", bound=orm.BaseModel)  # pylint: disable=[invalid-name]
+T_PARAM = TypeVar("T_PARAM", bound=float | str | UUID)  # pylint: disable=[invalid-name]
 
 
 @dataclass
@@ -50,14 +50,14 @@ class BeforeAfter:
 
 
 @dataclass
-class CollectionFilter(Generic[T_param]):
+class CollectionFilter(Generic[T_PARAM]):
     """
     Data required to construct a `WHERE ... IN (...)` clause.
     """
 
     field_name: str
     """Name of the model attribute to filter on."""
-    values: list[T_param] | None
+    values: list[T_PARAM] | None
     """Values for `IN` clause."""
 
 
@@ -92,7 +92,7 @@ class RepositoryNotFoundException(RepositoryException):
     """
 
 
-class Base(Generic[T_model]):
+class Base(Generic[T_MODEL]):
     """
     ABC for Repository objects.
 
@@ -105,7 +105,8 @@ class Base(Generic[T_model]):
     session : AsyncSession
         ORM database connection interface.
     select : Select
-        [Select][sqlalchemy.sql.expression.Select] for [`model_type`][starlite.contrib.bedrock.repository.Base.model_type].
+        [Select][sqlalchemy.sql.expression.Select] for
+         [`model_type`][starlite.contrib.bedrock.repository.Base.model_type].
 
     Parameters
     ----------
@@ -125,7 +126,7 @@ class Base(Generic[T_model]):
         Apply limit/offset pagination to the query.
     """
 
-    model_type: type[T_model]
+    model_type: type[T_MODEL]
     """
     A model that extends [`DeclarativeBase`][sqlalchemy.orm.DeclarativeBase]. Must be set by concrete subclasses.
     """
@@ -143,7 +144,8 @@ class Base(Generic[T_model]):
     """
     not_found_error_type: type[Exception] = RepositoryNotFoundException
     """
-    Exception type raised on access to `scalar()`, `update()` and `delete()` methods when the select query returns no rows.
+    Exception type raised on access to `scalar()`, `update()` and `delete()`
+     methods when the select query returns no rows.
     Default `RepositoryNotFoundException`.
     """
 
@@ -204,7 +206,7 @@ class Base(Generic[T_model]):
             self.select = self.select.where(getattr(self.model_type, k) == v)
 
     @overload
-    async def execute(self, statement: TypedReturnsRows[T_row], **kwargs: Any) -> "Result[T_row]":
+    async def execute(self, statement: TypedReturnsRows[T_ROW], **kwargs: Any) -> "Result[T_ROW]":
         ...
 
     @overload
@@ -230,18 +232,18 @@ class Base(Generic[T_model]):
         with self.catch_sqlalchemy_exception():
             return await self.session.execute(statement, **kwargs)
 
-    async def add_flush_refresh(self, instance: "T_base") -> "T_base":
+    async def add_flush_refresh(self, instance: "T_BASE") -> "T_BASE":
         """
         Adds `instance` to `self.session`, flush changes, refresh `instance`.
 
         Parameters
         ----------
-        instance : T_base
+        instance : T_BASE
             A sqlalchemy model.
 
         Returns
         -------
-        T_base
+        T_BASE
             `instance`
         """
         with self.catch_sqlalchemy_exception():
@@ -258,7 +260,7 @@ class Base(Generic[T_model]):
 
     # create
 
-    def parse_obj(self, data: abc.Mapping[str, Any]) -> "T_model":
+    def parse_obj(self, data: abc.Mapping[str, Any]) -> "T_MODEL":
         """
         Given a mapping of unstructured data, create an instance of `self.model_type`.
 
@@ -268,22 +270,22 @@ class Base(Generic[T_model]):
 
         Returns
         -------
-        T_model
+        T_MODEL
         """
         return self.model_type(**data)
 
-    async def create(self, data: dict[str, Any]) -> T_model:
+    async def create(self, data: dict[str, Any]) -> T_MODEL:
         """
         Create an instance of type `self.model`, add to session, and flush to db. Does not commit.
 
         Parameters
         ----------
         data : dict[str, Any]
-            Unstructured representation of `T_model`.
+            Unstructured representation of `T_MODEL`.
 
         Returns
         -------
-        T_model
+        T_MODEL
             A session-attached instance that has been flushed to the database, and refreshed.
         """
         return await self.add_flush_refresh(self.parse_obj(data))
@@ -328,7 +330,7 @@ class Base(Generic[T_model]):
         if data.values is not None:
             self.select = self.select.where(getattr(self.model_type, data.field_name).in_(data.values))
 
-    async def scalars(self, **kwargs: Any) -> "ScalarResult[T_model]":
+    async def scalars(self, **kwargs: Any) -> "ScalarResult[T_MODEL]":
         """
         Executes the repository select query, and returns response from
         [`AsyncResult.scalars()`][sqlalchemy.ext.asyncio.AsyncResult.scalars].
@@ -341,7 +343,7 @@ class Base(Generic[T_model]):
         Returns
         -------
         ScalarResult
-            Iterable of `T_model` instances.
+            Iterable of `T_MODEL` instances.
         """
         with self.catch_sqlalchemy_exception():
             result = await self.execute(self.select, **kwargs)
@@ -350,7 +352,8 @@ class Base(Generic[T_model]):
 
     def check_not_found(self, instance_or_none: T | None) -> T:
         """
-        Responsible for raising the [`Base.not_found_error_type`][starlite.contrib.bedrock.repository.Base.not_found_error_type]
+        Responsible for raising the
+         [`Base.not_found_error_type`][starlite.contrib.bedrock.repository.Base.not_found_error_type]
         on access of a [`scalar()`][starlite.contrib.bedrock.repository.Base.scalar] query result where no
         result is found.
 
@@ -374,7 +377,7 @@ class Base(Generic[T_model]):
             raise self.not_found_error_type
         return instance_or_none
 
-    async def scalar(self, **kwargs: Any) -> "T_model":
+    async def scalar(self, **kwargs: Any) -> "T_MODEL":
         """
         Get a scalar result from `self.select`.
 
@@ -387,7 +390,7 @@ class Base(Generic[T_model]):
 
         Returns
         -------
-        T_model
+        T_MODEL
             The type returned by `self.select`
 
         Raises
@@ -428,7 +431,7 @@ class Base(Generic[T_model]):
             setattr(model, k, v)
         return model
 
-    async def update(self, data: abc.Mapping[str, Any]) -> "T_model":
+    async def update(self, data: abc.Mapping[str, Any]) -> "T_MODEL":
         """
         Update the model returned from `self.select` with key/val pairs from `data`.
 
@@ -439,7 +442,7 @@ class Base(Generic[T_model]):
 
         Returns
         -------
-        T_model
+        T_MODEL
             The type returned by `self.select`
 
         Raises
@@ -452,7 +455,7 @@ class Base(Generic[T_model]):
         model = await self.scalar()
         return await self.add_flush_refresh(self.update_model(model, data))
 
-    async def upsert(self, data: dict[str, Any]) -> "T_model":
+    async def upsert(self, data: dict[str, Any]) -> "T_MODEL":
         """
         Update the model returned from `self.select` but if the instance doesn't exist create
         it and populate from ``data``.
@@ -465,7 +468,7 @@ class Base(Generic[T_model]):
 
         Returns
         -------
-        T_model
+        T_MODEL
             The type returned by `self.select`
 
         Raises
@@ -484,13 +487,13 @@ class Base(Generic[T_model]):
 
     # delete
 
-    async def delete(self) -> "T_model":
+    async def delete(self) -> "T_MODEL":
         """
         Delete and return the instance returned from `self.scalar()`.
 
         Returns
         -------
-        T_model
+        T_MODEL
             The type returned by `self.select`
 
         Raises

@@ -6,11 +6,11 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
 T = TypeVar("T")
-T_repository = TypeVar("T_repository", bound=repository.Base)
-T_schema = TypeVar("T_schema", bound=schema.BaseModelSchema)
+T_REPOSITORY = TypeVar("T_REPOSITORY", bound=repository.Base)  # pylint: disable=[invalid-name]
+T_SCHEMA = TypeVar("T_SCHEMA", bound=schema.BaseModelSchema)  # pylint: disable=[invalid-name]
 
 
-class BaseService(Generic[T_repository, T_schema]):
+class BaseService(Generic[T_REPOSITORY, T_SCHEMA]):
     """
     Generic service object.
 
@@ -35,13 +35,14 @@ class BaseService(Generic[T_repository, T_schema]):
         Filter the select query with arbitrary key/value pairs.
     """
 
-    repository_type: type[T_repository]
+    repository_type: type[T_REPOSITORY]
     """A [`repository.Base`][starlite.contrib.bedrock.repository.Base] concrete subclass."""
-    schema_type: type[T_schema]
+    schema_type: type[T_SCHEMA]
     """A [`schema.Base`][starlite.contrib.bedrock.schema.Base] concrete subclass."""
     exclude_keys = {"created_at", "updated_at"}
     """
-    These keys are always excluded from payloads passed to the repository. Merged with the `exclude_keys` parameter on instantiation.
+    These keys are always excluded from payloads passed to the repository.
+     Merged with the `exclude_keys` parameter on instantiation.
     """
 
     def __init__(
@@ -81,7 +82,7 @@ class BaseService(Generic[T_repository, T_schema]):
         """
         await self.repository.rollback()
 
-    def serialize(self, data: T_schema) -> dict[str, Any]:
+    def serialize(self, data: T_SCHEMA) -> dict[str, Any]:
         """
         Convert `data` that is a pydantic model instance to a `dict`.
 
@@ -89,7 +90,7 @@ class BaseService(Generic[T_repository, T_schema]):
 
         Parameters
         ----------
-        data : T_schema
+        data : T_SCHEMA
             A pydantic model instance.
 
         Returns
@@ -99,70 +100,70 @@ class BaseService(Generic[T_repository, T_schema]):
         """
         return data.dict(exclude=self.exclude_keys)
 
-    async def create(self, data: T_schema) -> T_schema:
+    async def create(self, data: T_SCHEMA) -> T_SCHEMA:
         """
         Wraps repository instance creation.
 
         Parameters
         ----------
-        data : T_schema
+        data : T_SCHEMA
             Representation to be created.
 
         Returns
         -------
-        T_schema
+        T_SCHEMA
             Representation of created instance.
         """
         model = await self.repository.create(self.serialize(data))
         return self.schema_type.from_orm(model)
 
-    async def list(self) -> list[T_schema]:
+    async def list(self) -> list[T_SCHEMA]:
         """
         Wraps repository scalars operation.
 
         Returns
         -------
-        list[T_schema]
-            Return value of `self.repository.scalars()` parsed to `T_schema`.
+        list[T_SCHEMA]
+            Return value of `self.repository.scalars()` parsed to `T_SCHEMA`.
         """
         models = await self.repository.scalars()
         return [self.schema_type.from_orm(i) for i in models]
 
-    async def update(self, data: T_schema) -> T_schema:
+    async def update(self, data: T_SCHEMA) -> T_SCHEMA:
         """
         Wraps repository update operation.
 
         Parameters
         ----------
-        data : T_schema
+        data : T_SCHEMA
             Representation to be updated.
 
         Returns
         -------
-        T_schema
+        T_SCHEMA
             Refreshed after insert.
         """
         model = await self.repository.update(self.serialize(data))
         return self.schema_type.from_orm(model)
 
-    async def upsert(self, data: T_schema) -> T_schema:
+    async def upsert(self, data: T_SCHEMA) -> T_SCHEMA:
         """
         Wraps repository upsert operation.
 
         Parameters
         ----------
-        data : T_schema
+        data : T_SCHEMA
             Representation for upsert.
 
         Returns
         -------
-        T_schema
+        T_SCHEMA
             Refreshed after insert.
         """
         model = await self.repository.upsert(self.serialize(data))
         return self.schema_type.from_orm(model)
 
-    async def show(self) -> T_schema:
+    async def show(self) -> T_SCHEMA:
         """
         Wraps repository scalar operation.
 
@@ -171,13 +172,13 @@ class BaseService(Generic[T_repository, T_schema]):
 
         Returns
         -------
-        T_schema
+        T_SCHEMA
             Representation of instance.
         """
         model = await self.repository.scalar()
         return self.schema_type.from_orm(model)
 
-    async def destroy(self) -> T_schema:
+    async def destroy(self) -> T_SCHEMA:
         """
         Wraps repository delete operation.
 
@@ -186,7 +187,7 @@ class BaseService(Generic[T_repository, T_schema]):
 
         Returns
         -------
-        T_schema
+        T_SCHEMA
             Representation of the deleted instance.
         """
         model = await self.repository.delete()

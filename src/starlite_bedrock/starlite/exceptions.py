@@ -75,6 +75,7 @@ class HTTPExceptionMixin:
     ```python
     from starlite_bedrock import repository
 
+
     class Repo(HTTPExceptionMixin, repository.Base):
         ...
     ```

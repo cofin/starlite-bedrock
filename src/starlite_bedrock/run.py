@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Application Web Server Gateway Interface - gunicorn."""
 import asyncio
 import os
@@ -7,7 +6,7 @@ import signal
 import sys
 import threading
 import time
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 from gunicorn.app.base import Application
 from gunicorn.arbiter import Arbiter
@@ -20,7 +19,7 @@ from starlite_bedrock.starlite import Starlite
 
 
 def get_app(import_path: str) -> "Starlite":
-    return cast(Starlite, import_string(import_path))
+    return cast("Starlite", import_string(import_path))
 
 
 def run_asgi(
@@ -113,13 +112,13 @@ class ApplicationLoader(Application):  # type: ignore
 
     def __init__(
         self,
-        options: Dict[str, Any] | None = None,
+        options: dict[str, Any] | None = None,
     ):
         self.options = options or {}
         self.config_path = self.options.pop("config", None)
         super().__init__()
 
-    def init(self, parser: Any, opts: Dict[str, Any], args: Any) -> None:
+    def init(self, parser: Any, opts: dict[str, Any], args: Any) -> None:
         """Class ApplicationLoader object constructor."""
         if opts:
             self.options = opts

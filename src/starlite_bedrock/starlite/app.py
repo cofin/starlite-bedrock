@@ -1,8 +1,7 @@
 import asyncio
-from typing import Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import starlite
-from pydantic_openapi_schema.v3_1_0 import SecurityRequirement
 from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 from starlite.utils import AsyncCallable
 
@@ -21,6 +20,9 @@ from starlite_bedrock.starlite import (
 from starlite_bedrock.starlite.dependencies import filters
 from starlite_bedrock.starlite.exceptions import logging_exception_handler
 from starlite_bedrock.worker import Worker, WorkerFunction, queue
+
+if TYPE_CHECKING:
+    from pydantic_openapi_schema.v3_1_0 import SecurityRequirement
 
 
 class Starlite(starlite.Starlite):
@@ -41,14 +43,14 @@ class Starlite(starlite.Starlite):
 
     def __init__(
         self,
-        route_handlers: List[starlite.types.ControllerRouterHandler],
+        route_handlers: list[starlite.types.ControllerRouterHandler],
         *,
         after_exception: Optional[starlite.types.SingleOrList[starlite.types.AfterExceptionHookHandler]] = None,
         after_request: Optional[starlite.types.AfterRequestHookHandler] = None,
         after_response: Optional[starlite.types.AfterResponseHookHandler] = None,
         after_shutdown: Optional[starlite.types.SingleOrList[starlite.types.LifeSpanHookHandler]] = None,
         after_startup: Optional[starlite.types.SingleOrList[starlite.types.LifeSpanHookHandler]] = None,
-        allowed_hosts: Optional[List[str]] = None,
+        allowed_hosts: Optional[list[str]] = None,
         before_request: Optional[starlite.types.BeforeRequestHookHandler] = None,
         before_send: Optional[starlite.types.SingleOrList[starlite.types.BeforeMessageSendHookHandler]] = None,
         before_shutdown: Optional[starlite.types.SingleOrList[starlite.types.LifeSpanHookHandler]] = None,
@@ -57,21 +59,21 @@ class Starlite(starlite.Starlite):
         cors_config: Optional[starlite.config.CORSConfig] = None,
         csrf_config: Optional[starlite.config.CSRFConfig] = None,
         debug: bool = False,
-        dependencies: Optional[Dict[str, starlite.Provide]] = None,
+        dependencies: Optional[dict[str, starlite.Provide]] = None,
         exception_handlers: Optional[starlite.types.ExceptionHandlersMap] = None,
-        guards: Optional[List[starlite.types.Guard]] = None,
-        middleware: Optional[List[starlite.types.Middleware]] = None,
-        on_shutdown: Optional[List[starlite.types.LifeSpanHandler]] = None,
-        on_startup: Optional[List[starlite.types.LifeSpanHandler]] = None,
+        guards: Optional[list[starlite.types.Guard]] = None,
+        middleware: Optional[list[starlite.types.Middleware]] = None,
+        on_shutdown: Optional[list[starlite.types.LifeSpanHandler]] = None,
+        on_startup: Optional[list[starlite.types.LifeSpanHandler]] = None,
         parameters: Optional[starlite.types.ParametersMap] = None,
-        plugins: Optional[List[starlite.plugins.PluginProtocol]] = None,
+        plugins: Optional[list[starlite.plugins.PluginProtocol]] = None,
         response_cookies: Optional[starlite.types.ResponseCookies] = None,
         response_headers: Optional[starlite.types.ResponseHeadersMap] = None,
-        security: Optional[List[SecurityRequirement]] = None,
+        security: Optional[list["SecurityRequirement"]] = None,
         static_files_config: Optional[
-            Union[starlite.config.StaticFilesConfig, List[starlite.config.StaticFilesConfig]]
+            Union[starlite.config.StaticFilesConfig, list[starlite.config.StaticFilesConfig]]
         ] = None,
-        tags: Optional[List[str]] = None,
+        tags: Optional[list[str]] = None,
         template_config: Optional[starlite.config.TemplateConfig] = None,
         worker_functions: list[WorkerFunction | tuple[str, WorkerFunction]] | None = None,
     ) -> None:

@@ -226,7 +226,7 @@ def create_task_group() -> "TaskGroup":
 def run(
     async_function: Callable[T_ParamSpec, Coroutine[Any, Any, T_Retval]],
     backend: str = "asyncio",
-    backend_options: Optional[Dict[str, Any]] = None,
+    backend_options: Optional[dict[str, Any]] = None,
 ) -> Callable[T_ParamSpec, T_Retval]:
     """
     Take an async function and create a regular (blocking) function that receives the
@@ -392,7 +392,7 @@ def run_async(
     return wrapper
 
 
-async def concurrently_execute(coros: List[Awaitable], limit: int = 3) -> None:
+async def concurrently_execute(coros: list[Awaitable], limit: int = 3) -> None:
     """Like asyncio.gather but with a limit on concurrency.
     using https://docs.python.org/3/library/asyncio-sync.html#asyncio.Semaphore
 

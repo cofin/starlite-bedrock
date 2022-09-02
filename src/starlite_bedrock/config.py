@@ -20,7 +20,7 @@ APP_PREFIX: str = os.environ.get("APP_PREFIX", "")
 """Application prefix is blank by default"""
 
 
-@lru_cache()
+@lru_cache
 def dotted_path(dotted_path: str = "starlite_bedrock") -> Path:
     """
     Returns the path to the base directory of the project.

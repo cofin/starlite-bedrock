@@ -104,4 +104,5 @@ repos:
             starlette,
             sqlalchemy,
             types-freezegun,
+            sqlalchemy2-stubs,
           ]

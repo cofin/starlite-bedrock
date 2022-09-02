@@ -36,7 +36,8 @@ engine = create_async_engine(
     future=True,
 )
 """Configure via [DatabaseSettings][starlite.contrib.bedrock.config.DatabaseSettings].
-Overrides default JSON serializer to use `orjson`. See [`create_async_engine()`][sqlalchemy.ext.asyncio.create_async_engine]
+Overrides default JSON serializer to use `orjson`.
+See [`create_async_engine()`][sqlalchemy.ext.asyncio.create_async_engine]
 for detailed instructions.
 """
 async_session_factory = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
@@ -56,7 +57,7 @@ def _sqla_on_connect(dbapi_connection: Any, _: Any) -> Any:
     return a `str` so that SQLAlchemy could then convert it to binary, or do the following, which
     changes the behavior of the dialect to expect a binary value from the serializer.
 
-    See Also https://github.com/sqlalchemy/sqlalchemy/blob/14bfbadfdf9260a1c40f63b31641b27fe9de12a0/lib/sqlalchemy/dialects/postgresql/asyncpg.py#L934
+    See Also https://github.com/sqlalchemy/sqlalchemy/blob/14bfbadfdf9260a1c40f63b31641b27fe9de12a0/lib/sqlalchemy/dialects/postgresql/asyncpg.py#L934 # pylint: disable=[line-too-long]
     """
 
     def encoder(bin_value: bytes) -> bytes:
