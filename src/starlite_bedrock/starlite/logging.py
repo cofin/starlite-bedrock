@@ -4,6 +4,7 @@ from functools import lru_cache
 from typing import Any
 
 import picologging
+from gunicorn.glogging import Logger as _GunicornLogger
 from starlette.status import HTTP_200_OK
 from starlite import LoggingConfig
 
@@ -34,6 +35,15 @@ class AccessLogFilter(logging.Filter):
         ):
             return False
         return True
+
+
+class GunicornLogger(_GunicornLogger):  # type: ignore
+    """Customized Gunicorn Logger"""
+
+    def setup(self, cfg: Any) -> None:
+        """Configures logger"""
+        self.error_logger = picologging.getLogger("gunicorn.error")
+        self.access_logger = picologging.getLogger("gunicorn.access")
 
 
 log_config = LoggingConfig(
