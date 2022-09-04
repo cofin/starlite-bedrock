@@ -7,7 +7,6 @@ An opinionated starlite api configuration library.
 from starlite_bedrock import (
     cli,
     client,
-    config,
     db_types,
     endpoint_decorator,
     orm,
@@ -18,8 +17,8 @@ from starlite_bedrock import (
 )
 
 __all__ = [
+    "cli",
     "client",
-    "config",
     "db_types",
     "endpoint_decorator",
     "orm",
@@ -27,7 +26,6 @@ __all__ = [
     "schema",
     "service",
     "starlite",
-    "cli",
 ]
 
 
