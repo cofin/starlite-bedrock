@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "starlite-bedrock"
-version = "0.0.3"
+version = "0.0.4"
 description = "Opinionated Starlite API and async worker boilerplate"
 authors = ["Cody Fincher <codyfincher@google.com>"]
 packages = [{ include = "starlite_bedrock", from = "src" }]
