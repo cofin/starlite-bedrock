@@ -12,7 +12,6 @@ from starlite_bedrock import (
     orm,
     repository,
     schema,
-    service,
     starlite,
 )
 
@@ -24,7 +23,6 @@ __all__ = [
     "orm",
     "repository",
     "schema",
-    "service",
     "starlite",
 ]
 

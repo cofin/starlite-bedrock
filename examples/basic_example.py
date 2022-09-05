@@ -1,6 +1,4 @@
-from starlite import OpenAPIConfig, Starlite
-
-from starlite_bedrock.starlite import get
+from starlite import OpenAPIConfig, Starlite, get
 
 openapi_config = OpenAPIConfig(
     title="example",
