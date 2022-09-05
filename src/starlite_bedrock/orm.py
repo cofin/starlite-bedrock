@@ -1,15 +1,18 @@
 import functools
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Any, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Optional, TypeAlias, TypeVar
 
-from sqlalchemy import Column, MetaData
+from sqlalchemy import BigInteger, Boolean, Column, Identity, MetaData, String
 from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy.event import listens_for
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session
 from sqlalchemy.orm import registry as orm_registry
 from sqlalchemy.orm.decl_api import declarative_mixin, declared_attr
 from sqlalchemy.sql import func as sql_func
+from sqlalchemy.sql.expression import FunctionElement
 
 from starlite_bedrock.db_types import GUID, DateTime
 
@@ -48,6 +51,23 @@ def touch_updated_timestamp(session: Session, *_: Any) -> None:
             setattr(instance, "updated_at", datetime.now())  # noqa: B010
 
 
+class coalesce(FunctionElement):  # pylint: disable=[invalid-name]
+    name = "coalesce"
+    inherit_cache = True
+
+
+@compiles(coalesce)  # type: ignore
+def compile_coalesce(element, compiler, **kw: Any) -> str:  # type: ignore[no-untyped-def] # pylint: disable=[unused-argument]
+    return f"coalesce({compiler.process(element.clauses)})"
+
+
+@compiles(coalesce, "oracle")  # type: ignore
+def compile_nvl(element, compiler, **kw) -> str:  # type: ignore[no-untyped-def] # pylint: disable=[unused-argument]
+    if len(element.clauses) > 2:
+        raise TypeError("coalesce (nvl) only supports two arguments on Oracle")
+    return f"nvl({compiler.process(element.clauses)})"
+
+
 class BaseModel(DeclarativeBase):
     """
     Base for all SQLAlchemy declarative models.
@@ -58,6 +78,14 @@ class BaseModel(DeclarativeBase):
     # or SQL expression defaults, subsequent to a flush, without
     # triggering an expired load
     __mapper_args__ = {"eager_defaults": True}
+    id: Mapped["UUID4"] = Column(  # type: ignore
+        GUID,
+        primary_key=True,
+        default=uuid.uuid4,
+        unique=True,
+        nullable=False,
+    )
+    id._creation_order = 1  # type: ignore[attr-defined] # pylint: disable=[protected-access]
 
     def from_dict(self, **kwargs: Any) -> "BaseModel":
         """Return ORM Object from Dictionary"""
@@ -75,11 +103,23 @@ class BaseModel(DeclarativeBase):
 
 
 @declarative_mixin
-class GUIDModelMixin:
+class IntegerPrimaryKeyMixin:
     """GUID Column Mixin"""
 
-    id: Mapped["UUID4"] = Column(GUID, primary_key=True, default=uuid.uuid4)
+    id: Mapped["int"] = Column(BigInteger, Identity(always=True), primary_key=True, unique=True, nullable=False)
     id._creation_order = 1  # type: ignore[attr-defined] # pylint: disable=[protected-access]
+
+
+@declarative_mixin
+class SlugModelMixin:
+    slug: Mapped["str"] = Column(String(length=100), index=True, nullable=False, unique=True)
+    slug._creation_order = 2  # type: ignore[attr-defined] # pylint: disable=[protected-access]
+
+
+@declarative_mixin
+class SoftDeleteMixin:
+    is_deleted: Mapped[bool] = Column(Boolean, index=True, nullable=False, default=False)
+    is_deleted._creation_order = 999  # type: ignore[attr-defined] # pylint: disable=[protected-access]
 
 
 @declarative_mixin
@@ -128,19 +168,20 @@ class ExpiresAtMixin:
         )
 
 
-M = TypeVar("M", bound=BaseModel)
-M_GuidModel = TypeVar("M_GuidModel", bound=GUIDModelMixin)  # pylint: disable=[invalid-name]
-M_CreatedUpdatedAtModel = TypeVar(  # pylint: disable=[invalid-name]
-    "M_CreatedUpdatedAtModel", bound=CreatedUpdatedAtMixin
-)
-M_ExpiresAtModel = TypeVar("M_ExpiresAtModel", bound=ExpiresAtMixin)  # pylint: disable=[invalid-name]
-
-
-def find_by_table_name(table_name: str) -> Optional["BaseModel"]:
+def find_by_table_name(table_name: str) -> Optional["DatabaseModel"]:
     """Return model based on class"""
     for mapper in mapper_registry.mappers:
-        model: BaseModel = mapper.class_  # type: ignore
+        model: DatabaseModel = mapper.class_  # type: ignore
         model_class_name = model.__tablename__
         if model_class_name == table_name:
             return model
     return None
+
+
+DatabaseSession: TypeAlias = AsyncSession
+DatabaseModel = TypeVar("DatabaseModel", bound=BaseModel)
+DatabaseModelWithSlug = TypeVar("DatabaseModelWithSlug", bound=SlugModelMixin)
+DatabaseModelWithIntegerPrimaryKey = TypeVar("DatabaseModelWithIntegerPrimaryKey", bound=IntegerPrimaryKeyMixin)
+DatabaseModelWithCreatedUpdatedAt = TypeVar("DatabaseModelWithCreatedUpdatedAt", bound=CreatedUpdatedAtMixin)
+DatabaseModelWithExpiresAt = TypeVar("DatabaseModelWithExpiresAt", bound=ExpiresAtMixin)
+DatabaseModelWithSoftDelete = TypeVar("DatabaseModelWithSoftDelete", bound=SoftDeleteMixin)
