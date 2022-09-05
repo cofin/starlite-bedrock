@@ -7,29 +7,29 @@ An opinionated starlite api configuration library.
 from starlite_bedrock import (
     cli,
     client,
-    config,
-    db,
+    db_types,
     endpoint_decorator,
     orm,
-    redis,
     repository,
     schema,
-    service,
     starlite,
-    worker,
 )
 
 __all__ = [
+    "cli",
     "client",
-    "config",
-    "db",
+    "db_types",
     "endpoint_decorator",
     "orm",
-    "redis",
     "repository",
     "schema",
-    "service",
     "starlite",
-    "worker",
-    "cli",
 ]
+
+
+def main() -> None:
+    cli.app()
+
+
+if __name__ == "__main__":
+    main()

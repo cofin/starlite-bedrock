@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Literal, Optional, Type, cast
+from typing import TYPE_CHECKING, Any, Literal, Optional, cast
 from uuid import UUID
 
 from pydantic import UUID4, EmailStr, SecretStr
@@ -45,7 +45,7 @@ def is_case_insensitive(mixed: Any) -> bool:
     except AttributeError:
         try:
             return issubclass(
-                inspect_type(mixed).comparator_factory,  # type: ignore
+                inspect_type(mixed).comparator_factory,  # type: ignore[arg-type]
                 CaseInsensitiveComparator,
             )
         except AttributeError:
@@ -122,9 +122,9 @@ class GUID(TypeDecorator):
             return str(value)
         else:
             if not isinstance(value, UUID):
-                return "%.32x" % UUID(value).int  # pylint: ignore=[consider-using-f-string]
+                return "%.32x" % UUID(value).int  # pylint: disable=[consider-using-f-string]
             else:
-                return "%.32x" % value.int  # pylint: ignore=[consider-using-f-string]
+                return "%.32x" % value.int  # pylint: disable=[consider-using-f-string]
 
     def process_result_value(self, value: Any, dialect: "Dialect") -> Any:
         if value is None:
@@ -135,7 +135,7 @@ class GUID(TypeDecorator):
             return value
 
     @property
-    def python_type(self) -> Type[UUID4]:
+    def python_type(self) -> type[UUID4]:
         return self.impl.python_type
 
 
@@ -159,7 +159,7 @@ class DateTime(TypeDecorator):
         return value
 
     @property
-    def python_type(self) -> Type[datetime]:
+    def python_type(self) -> type[datetime]:
         return self.impl.python_type
 
 
@@ -175,8 +175,9 @@ class EmailString(TypeDecorator):
     comparator_factory = CaseInsensitiveComparator
     cache_ok = True
 
-    def __init__(self, length: int = 255, *args: Any, **kwargs: Any) -> None:
-        super(EmailString, self).__init__(length=length, *args, **kwargs)
+    def __init__(self, *args: Any, length: int = 255, **kwargs: Any) -> None:
+        kwargs["length"] = length
+        super().__init__(*args, **kwargs)
 
     def process_bind_param(self, value: Optional[str | EmailStr], dialect: "Dialect") -> Any | None:
         if value is not None:
@@ -184,7 +185,7 @@ class EmailString(TypeDecorator):
         return value
 
     @property
-    def python_type(self) -> Type[EmailStr]:
+    def python_type(self) -> type[EmailStr]:
         return self.impl.python_type
 
 
@@ -202,12 +203,12 @@ class JsonObject(TypeDecorator):
 
     def load_dialect_impl(self, dialect: "Dialect") -> Any:
         if dialect.name == "postgresql":
-            return dialect.type_descriptor(JSONB())  # type: ignore
+            return dialect.type_descriptor(JSONB())  # type: ignore[no-untyped-call]
         else:
             return dialect.type_descriptor(JSON())
 
     @property
-    def python_type(self) -> Type[dict[str, Any]]:
+    def python_type(self) -> type[dict[str, Any]]:
         return self.impl.python_type
 
 
@@ -270,9 +271,9 @@ class EncryptedString(TypeDecorator):
         if self.backend == "tink":
             raise NotImplementedError
 
-    def column_expression(self, value: Any) -> Any:
+    def column_expression(self, column: Any) -> Any:
         if self.backend == "pgcrypto":
-            return sql_func.pgp_sym_encrypt(value, self.passphrase)
+            return sql_func.pgp_sym_encrypt(column, self.passphrase)
         if self.backend == "tink":
             raise NotImplementedError
 

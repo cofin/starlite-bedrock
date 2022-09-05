@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from enum import Enum, EnumMeta
-from typing import Any, Dict, Union
+from typing import Any, Union
 from uuid import UUID
 
 import orjson
@@ -34,14 +34,14 @@ def serialize_object(obj: Any) -> str:
     ).decode()
 
 
-def deserialize_object(obj: Union[bytes, bytearray, memoryview, str, Dict[str, Any]]) -> Any:
+def deserialize_object(obj: Union[bytes, bytearray, memoryview, str, dict[str, Any]]) -> Any:
     """
     Decodes to an object with the optimized ORJSON package
 
     orjson.dumps returns bytearray, so you can't pass it directly as json_serializer
 
     """
-    if isinstance(obj, Dict):
+    if isinstance(obj, dict):
         return obj
     return orjson.loads(obj)
 
@@ -122,7 +122,11 @@ class BaseModelSchema(BaseSchema):
 
 
 class BaseSettings(_BaseSettings):
+    """Base Settings"""
+
     class Config:
+        """Base Settings Config"""
+
         json_loads = deserialize_object
         json_dumps = serialize_object
         case_sensitive = True

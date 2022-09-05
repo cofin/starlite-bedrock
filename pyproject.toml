@@ -1,9 +1,12 @@
 [tool.poetry]
 name = "starlite-bedrock"
-version = "0.0.1"
+version = "0.0.5"
 description = "Opinionated Starlite API and async worker boilerplate"
 authors = ["Cody Fincher <codyfincher@google.com>"]
 packages = [{ include = "starlite_bedrock", from = "src" }]
+
+[tool.poetry.scripts]
+starlite = "starlite_bedrock:main"
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -14,11 +17,9 @@ httpx = "*"
 orjson = "*"
 pydantic =  { extras = ["email","dotenv"], version = "*"}
 saq = {version = "*", extras = ["hiredis"]}
-sqlalchemy = { git = "https://github.com/sqlalchemy/sqlalchemy.git", branch = "main" }
+sqlalchemy = { git = "https://github.com/sqlalchemy/sqlalchemy.git", branch = "main", extras = ["asyncio"] }
 alembic = "*"
-greenlet = "*"
 anyio = "*"
-structlog = "*"
 typer = "*"
 rich = "*"
 uvicorn =  { extras = ["standard"], version = "*"}
