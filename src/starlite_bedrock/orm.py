@@ -178,7 +178,7 @@ def find_by_table_name(table_name: str) -> Optional["DatabaseModel"]:
     return None
 
 
-DatabaseSession: TypeAlias = AsyncSession
+DatabaseSession: TypeAlias = AsyncSession | Session
 DatabaseModel = TypeVar("DatabaseModel", bound=BaseModel)
 DatabaseModelWithSlug = TypeVar("DatabaseModelWithSlug", bound=SlugModelMixin)
 DatabaseModelWithIntegerPrimaryKey = TypeVar("DatabaseModelWithIntegerPrimaryKey", bound=IntegerPrimaryKeyMixin)
