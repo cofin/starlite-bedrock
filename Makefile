@@ -1,10 +1,9 @@
 .DEFAULT_GOAL:=help
 .ONESHELL:
 ENV_PREFIX=$(shell python3 -c "if __import__('pathlib').Path('.venv/bin/pip').exists(): print('.venv/bin/')")
+VENV_EXISTS=$(shell python3 -c "if __import__('pathlib').Path('.venv/bin/activate').exists(): print('yes')")
 USING_POETRY=$(shell grep "tool.poetry" pyproject.toml && echo "yes")
-USING_DOCKER=$(shell grep "USE_DOCKER=true" .env && echo "yes")
 PYTHON_PACKAGES=$(shell poetry export -f requirements.txt  --without-hashes |cut -d'=' -f1 |cut -d ' ' -f1)
-GRPC_PYTHON_BUILD_SYSTEM_ZLIB=true
 
 .EXPORT_ALL_VARIABLES:
 
@@ -35,4 +34,6 @@ format-source: ## Format source code
 .PHONY: install
 install:          ## Install the project in dev mode.
 	@if ! poetry --version > /dev/null; then echo 'poetry is required, install from https://python-poetry.org/'; exit 1; fi
+	@if [ "$(VENV_EXISTS)" ]; then echo "Removing existing environment"; fi
+	@if [ "$(VENV_EXISTS)" ]; then rm -Rf .venv; fi
 	@if [ "$(USING_POETRY)" ]; then poetry config virtualenvs.in-project true && poetry config virtualenvs.create false && python3 -m venv --copies .venv && source .venv/bin/activate && .venv/bin/pip install -U wheel setuptools cython pip && poetry install && exit; fi
