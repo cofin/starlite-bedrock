@@ -278,7 +278,7 @@ log_config = LoggingConfig(
             "handlers": ["cfg://handlers.console"],
         },
     },
-    formatters={"standard": {"format": "%(levelname)s - %(asctime)s - %(name)s - %(funcName)s - %(message)s"}},
+    formatters={"standard": {"format": "[%(name)s][%(funcName)s]   %(message)s"}},
     loggers={
         "starlite_bedrock": {
             "propagate": True,
