@@ -17,7 +17,8 @@ httpx = "*"
 orjson = "*"
 pydantic =  { extras = ["email","dotenv"], version = "*"}
 saq = {version = "*", extras = ["hiredis"]}
-sqlalchemy = { git = "https://github.com/sqlalchemy/sqlalchemy.git", branch = "main", extras = ["asyncio"] }
+sqlalchemy = { git = "https://github.com/sqlalchemy/sqlalchemy.git", branch = "main"}
+greenlet = "*"
 alembic = "*"
 anyio = "*"
 typer = "*"

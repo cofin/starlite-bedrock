@@ -121,7 +121,10 @@ class BaseRepositoryProtocol(SQLRepositoryMixin, Protocol[DatabaseModel]):
     Args:
         Protocol (_type_): _description_
     """
-
+    session: DatabaseSession
+    """
+    Default database session to use for all operations.
+    """
     model: Type[DatabaseModel]
     """
     A model that extends [`DeclarativeBase`][sqlalchemy.orm.DeclarativeBase]. Must be set by concrete subclasses.
@@ -206,9 +209,6 @@ class SoftDeleteRepositoryProtocol(BaseRepositoryProtocol, Protocol[DatabaseMode
 
 class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
     """Base SQL Alchemy repository."""
-
-    session: DatabaseSession
-
     def __init__(
         self,
         session: DatabaseSession,

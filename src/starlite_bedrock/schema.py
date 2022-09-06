@@ -1,12 +1,15 @@
 from datetime import datetime, timezone
 from enum import Enum, EnumMeta
-from typing import Any, Union
+
+# Standard Library
+from typing import Any, Generic, List, TypeVar, Union
 from uuid import UUID
 
 import orjson
 from pydantic import BaseModel as _BaseSchema
 from pydantic import BaseSettings as _BaseSettings
 from pydantic import Field, SecretBytes, SecretStr
+from pydantic.generics import GenericModel
 
 
 def serialize_object(obj: Any) -> str:
@@ -142,3 +145,24 @@ class BaseSettings(_BaseSettings):
         use_enum_values = True
         env_file = ".env"
         env_file_encoding = "utf-8"
+
+
+
+
+BaseSchemaType = TypeVar("BaseSchemaType", bound=BaseSchema) # pylint: disable=[invalid-name]
+
+
+class TotaledResults(GenericModel, Generic[BaseSchemaType]):
+    """Provides count and result of result set"""
+
+    count: int
+    results: List[BaseSchemaType]
+
+
+class PaginatedResults(GenericModel, Generic[BaseSchemaType]):
+    """Provides count, result, and page information of results"""
+
+    count: int
+    limit: int
+    skip: int
+    results: List[BaseSchemaType]

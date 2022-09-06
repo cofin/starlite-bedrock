@@ -1,6 +1,6 @@
-import logging
 from typing import TYPE_CHECKING
 
+import picologging as logging
 from starlette.status import HTTP_409_CONFLICT
 from starlite.exceptions import (
     HTTPException,
