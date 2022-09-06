@@ -1,3 +1,4 @@
+import abc
 import asyncio
 import random
 import string
@@ -15,11 +16,12 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    overload,
 )
 from uuid import UUID
 
 from pydantic import UUID4
-from sqlalchemy import Delete, Executable, RowMapping
+from sqlalchemy import Executable, RowMapping
 from sqlalchemy.engine import Result
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,6 +29,7 @@ from sqlalchemy.orm import InstrumentedAttribute, RelationshipProperty
 from sqlalchemy.sql import Select, delete
 from sqlalchemy.sql import func as sql_func
 from sqlalchemy.sql import select
+from sqlalchemy.sql.selectable import TypedReturnsRows
 
 from starlite_bedrock.orm import (
     DatabaseModel,
@@ -34,7 +37,6 @@ from starlite_bedrock.orm import (
     DatabaseModelWithExpiresAt,
     DatabaseModelWithSlug,
     DatabaseModelWithSoftDelete,
-    DatabaseSession,
 )
 from starlite_bedrock.utils.async_tools import run_async
 from starlite_bedrock.utils.text_tools import slugify
@@ -44,14 +46,15 @@ __all__ = [
     "RepositoryConflictException",
     "RepositoryException",
     "ParamType",
-    "RepositoryType",
+    "Repository",
     "BaseRepository",
     "SlugRepositoryMixin",
 ]
 
-
+T = TypeVar("T")
 ParamType = TypeVar("ParamType", bound=float | str | UUID | datetime | int)  # pylint: disable=[invalid-name]
-RepositoryType = TypeVar("RepositoryType", bound="BaseRepository")  # pylint: disable=[invalid-name]
+Repository = TypeVar("Repository", bound="BaseRepository")  # pylint: disable=[invalid-name]
+TableRow = TypeVar("TableRow", bound=tuple[Any, ...])
 
 
 class RepositoryException(Exception):
@@ -73,7 +76,7 @@ class RepositoryNotFoundException(RepositoryException):
     """
 
 
-class SQLRepositoryMixin(Protocol):
+class SQLRepositoryBase(Protocol):
     """Basic repository interface for SQL."""
 
     base_error_type: type[Exception] = RepositoryException
@@ -111,17 +114,17 @@ class SQLRepositoryMixin(Protocol):
             raise self.base_error_type(f"An exception occurred: {e}") from e
 
     @staticmethod
-    def _is_asyncio_session(db: DatabaseSession) -> bool:
+    def _is_asyncio_session(db: AsyncSession) -> bool:
         return isinstance(db, AsyncSession)
 
 
-class BaseRepositoryProtocol(SQLRepositoryMixin, Protocol[DatabaseModel]):
+class BaseRepositoryProtocol(SQLRepositoryBase, Protocol[DatabaseModel]):
     """_summary_
 
     Args:
         Protocol (_type_): _description_
     """
-    session: DatabaseSession
+    session: AsyncSession
     """
     Default database session to use for all operations.
     """
@@ -133,45 +136,43 @@ class BaseRepositoryProtocol(SQLRepositoryMixin, Protocol[DatabaseModel]):
     """
     Specify the default join options to use when querying the repository.
     """
-
+   
     async def paginate(
         self,
-        db: DatabaseSession,
+        db: AsyncSession,
         statement: Select,
         limit: int = 10,
         offset: int = 0,
     ) -> Tuple[List[DatabaseModel], int]:
         ...  # pragma: no cover
 
-    def order_by(self, db: DatabaseSession, statement: Select, ordering: List[Tuple[List[str], bool]]) -> Select:
+    def order_by(self, db: AsyncSession, statement: Select, ordering: List[Tuple[List[str], bool]]) -> Select:
         ...  # pragma: no cover
 
     async def get_by_id(
-        self, db: DatabaseSession, id: Union[UUID4, int]  # pylint: disable=[redefined-builtin]
+        self, db: AsyncSession, id: Union[UUID4, int]  # pylint: disable=[redefined-builtin]
     ) -> Optional[DatabaseModel]:
         ...  # pragma: no cover
 
-    async def get_one_or_none(self, db: DatabaseSession, statement: Select) -> Optional[DatabaseModel]:
+    async def get(
+        self, db: AsyncSession, id: Union[UUID4, int]  # pylint: disable=[redefined-builtin]
+    ) -> Optional[DatabaseModel]:
         ...  # pragma: no cover
 
-    async def list(self, db: DatabaseSession, statement: Select) -> List[DatabaseModel]:
+    async def get_one_or_none(self, db: AsyncSession, statement: Select) -> Optional[DatabaseModel]:
         ...  # pragma: no cover
 
-    async def create(self, db: DatabaseSession, db_object: DatabaseModel) -> DatabaseModel:
+    async def list(self, db: AsyncSession, statement: Select) -> List[DatabaseModel]:
         ...  # pragma: no cover
 
-    async def update(self, db: DatabaseSession, db_object: DatabaseModel) -> None:
+    async def create(self, db: AsyncSession, db_object: DatabaseModel) -> DatabaseModel:
         ...  # pragma: no cover
 
-    async def delete(self, db: DatabaseSession, db_object: DatabaseModel) -> None:
+    async def update(self, db: AsyncSession, db_object: DatabaseModel) -> None:
         ...  # pragma: no cover
 
-    async def _execute_statement(
-        self,
-        db: DatabaseSession,
-        statement: Select | Delete,
-    ) -> Result:
-        ...  # pragma: no cover # noqa: WPS428
+    async def delete(self, db: AsyncSession, db_object: DatabaseModel) -> None:
+        ...  # pragma: no cover
 
     def sql_join_options(self, options: Optional[Sequence[Any]] = None) -> Sequence[Any]:
         if options:
@@ -184,7 +185,7 @@ class BaseRepositoryProtocol(SQLRepositoryMixin, Protocol[DatabaseModel]):
 class ExpiresAtRepositoryProtocol(BaseRepositoryProtocol, Protocol[DatabaseModelWithExpiresAt]):
     model: Type[DatabaseModelWithExpiresAt]
 
-    async def delete_expired(self, db: DatabaseSession) -> None:
+    async def delete_expired(self, db: AsyncSession) -> None:
         ...  # pragma: no cover
 
 
@@ -197,7 +198,7 @@ class SlugRepositoryProtocol(BaseRepositoryProtocol, Protocol[DatabaseModelWithS
 
     async def get_by_slug(
         self,
-        db: DatabaseSession,
+        db: AsyncSession,
         slug: str,
     ) -> Optional[DatabaseModelWithSlug]:
         ...  # pragma: no cover
@@ -211,7 +212,7 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
     """Base SQL Alchemy repository."""
     def __init__(
         self,
-        session: DatabaseSession,
+        session: AsyncSession,
         model: Type[DatabaseModel],
         default_options: Optional[list] = None,
     ) -> None:
@@ -227,22 +228,22 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
         self.model = model
         self.default_options = default_options if default_options else []
 
-    async def count(self, db: DatabaseSession, statement: Select) -> int:
+    async def count(self, db: AsyncSession, statement: Select) -> int:
         count_statement = statement.with_only_columns(  # type: ignore[call-overload]
             [sql_func.count()],
             maintain_column_froms=True,
         ).order_by(None)
-        results = await self._execute_statement(db, count_statement)
+        results = await self.execute(db, count_statement)
         return results.scalar_one()  # type: ignore
 
     async def paginate(
-        self, db: DatabaseSession, statement: Select, limit: int = 10, offset: int = 0
+        self, db: AsyncSession, statement: Select, limit: int = 10, offset: int = 0
     ) -> Tuple[List[DatabaseModel], int]:
         paginated_statement = statement.offset(offset).limit(limit)
 
         [count, results] = await asyncio.gather(
             self.count(db, statement),
-            self._execute_statement(
+            self.execute(
                 db,
                 paginated_statement,
             ),
@@ -252,7 +253,7 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
 
     def order_by(
         self,
-        db: DatabaseSession,
+        db: AsyncSession,
         statement: Select,
         ordering: List[Tuple[List[str], bool]],
     ) -> Select:
@@ -284,10 +285,10 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
         return statement
 
     async def get_one_or_none(
-        self, db: DatabaseSession, statement: Select, options: Optional[List[Any]] = None
+        self, db: AsyncSession, statement: Select, options: Optional[List[Any]] = None
     ) -> Optional[DatabaseModel]:
         statement.options(*self.sql_join_options(options)).execution_options(populate_existing=True)
-        results = await self._execute_statement(db, statement)
+        results = await self.execute(db, statement)
         db_object = results.first()
         if db_object is None:
             return None
@@ -295,7 +296,7 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
 
     async def get_by_id(
         self,
-        db: DatabaseSession,
+        db: AsyncSession,
         id: Union[int, UUID4],  # pylint: disable=[redefined-builtin]
         options: Optional[list] = None,
     ) -> Optional[DatabaseModel]:
@@ -303,7 +304,7 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
 
         Args:
             id (Union[int, UUID4]): _description_
-            db (DatabaseSession, optional): _description_. Defaults to DatabaseSession().
+            db (AsyncSession, optional): _description_. Defaults to AsyncSession().
             options (Optional[list], optional): _description_. Defaults to None.
 
         Returns:
@@ -320,7 +321,7 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
 
     async def list(
         self,
-        db: DatabaseSession,
+        db: AsyncSession,
         statement: Optional[Select] = None,
         options: Optional[list] = None,
     ) -> List[DatabaseModel]:
@@ -328,24 +329,24 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
             statement = (
                 select(self.model).options(*self.sql_join_options(options)).execution_options(populate_existing=True)
             )
-        results = await self._execute_statement(db, statement)
+        results = await self.execute(db, statement)
         return [result[0] for result in results.unique().all()]
 
     async def create(
         self,
-        db: DatabaseSession,
+        db: AsyncSession,
         db_object: DatabaseModel,
         commit: bool = True,
     ) -> DatabaseModel:
         db.add(instance=db_object)
         if commit:
-            await self._commit(db)
-            await self._refresh(db, db_object)
+            await self.commit(db)
+            await self.refresh(db, db_object)
         return db_object
 
     async def create_many(
         self,
-        db: DatabaseSession,
+        db: AsyncSession,
         db_objects: List[DatabaseModel],
         commit: bool = True,
     ) -> List[DatabaseModel]:
@@ -353,59 +354,96 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
         for db_object in db_objects:
             db.add(instance=db_object)
         if commit:
-            await self._commit(db)
+            await self.commit(db)
         return db_objects
+    
+    @staticmethod
+    def update_model(model: T, data: abc.Mapping[str, Any]) -> T:
+        """
+        Simple helper for setting key/values from `data` as attributes on `model`.
 
-    async def update(self, db: DatabaseSession, db_object: DatabaseModel, commit: bool = True) -> None:
+        Parameters
+        ----------
+        model : T
+            Model instance to be updated.
+        data : Mapping[str, Any]
+            Mapping of data to set as key/value pairs on `model`.
+
+        Returns
+        -------
+        T
+            Key/value pairs from `data` have been set on the model.
+        """
+        for k, v in data.items():
+            setattr(model, k, v)
+        return model
+
+    async def update(self, data: abc.Mapping[str, Any]) -> DatabaseModel:
+        """
+        Update the model returned from `self.select` with key/val pairs from `data`.
+
+        Parameters
+        ----------
+        data : Mapping[str, Any]
+            Key/value pairs used to set attribute vals on result of `self.select`.
+
+        Returns
+        -------
+        DatabaseModel
+            The type returned by `self.select`
+
+        Raises
+        ------
+        Base.not_found_error_type
+            If `self.select` returns no rows.
+        Base.base_error_type
+            If `self.select` returns more than a single row.
+        """
+        model = await self.scalar()
+        return await self.add(self.update_model(model, data))
+    async def update(self, db: AsyncSession, db_object: DatabaseModel, commit: bool = True) -> None:
         db.add(instance=db_object)
         if commit:
-            await self._commit(db)
-            await self._refresh(db, db_object)
+            await self.commit(db)
+            await self.refresh(db, db_object)
 
-    async def delete(self, db: DatabaseSession, db_object: DatabaseModel, commit: bool = False) -> None:
-        await self._delete(db, db_object)
+    async def delete(self, db: AsyncSession, db_object: DatabaseModel, commit: bool = False) -> None:
+        await self.delete(db, db_object)
         if commit:
-            await self._commit(db)
+            await self.commit(db)
 
-    async def refresh(self, db: DatabaseSession, db_object: DatabaseModel) -> None:
-        await self._refresh(db, db_object)
+    async def refresh(self, db: AsyncSession, db_object: DatabaseModel) -> None:
+        await db.refresh( db_object)
 
-    async def commit(self, db: DatabaseSession) -> None:
-        await self._commit(db)
+    async def commit(self, db: AsyncSession) -> None:
+        await db.commit()
 
-    async def execute(self, db: DatabaseSession, statement: Select, commit: bool = True) -> None:
-        await self._execute_statement(db, statement)
-        if commit:
-            await self._commit(db)
+    @overload
+    async def execute(self,  db: AsyncSession,statement: TypedReturnsRows[TableRow], **kwargs: Any) -> Result[TableRow]:
+        ...
 
-    async def _commit(self, db: DatabaseSession) -> None:
-        if self._is_asyncio_session(db):
-            await db.commit()  # type: ignore
-        else:
-            await run_async(db.commit)()
+    @overload
+    async def execute(self, db: AsyncSession, statement: Executable, **kwargs: Any) -> Result[Any]:
+        ...
 
-    async def _refresh(self, db: DatabaseSession, db_object: DatabaseModel) -> None:
-        if self._is_asyncio_session(db):
-            await db.refresh(db_object)  # type: ignore
-        else:
-            await run_async(db.refresh)(db_object)
+    async def execute(self, db: AsyncSession, statement: Executable, **kwargs: Any) -> Result[Any]:
+        """
+        Execute `statement` with [`self.session`][starlite_lib.repository.Base.session].
 
-    async def _delete(self, db: DatabaseSession, db_object: DatabaseModel) -> None:
-        if self._is_asyncio_session(db):
-            await db.delete(db_object)  # type: ignore
-        else:
-            await run_async(db.delete)(db_object)
+        Parameters
+        ----------
+        statement : Executable
+            Any SQLAlchemy executable type.
+        **kwargs : Any
+            Passed as kwargs to [`self.session.execute()`][sqlalchemy.ext.asyncio.AsyncSession.execute]
 
-    async def _execute_statement(self, db: DatabaseSession, statement: Select | Delete) -> Result:
-        if self._is_asyncio_session(db):
-            return await db.execute(statement)  # type: ignore
-        return await run_async(db.execute)(statement)  # type: ignore
-
-    async def _execute_script(self, db: DatabaseSession, statement: Executable) -> None:
+        Returns
+        -------
+        Result
+            A set of database results.
+        """
         with self.catch_sqlalchemy_exception():
-            if self._is_asyncio_session(db):
-                return await db.execute(statement)  # type: ignore
-            return await run_async(db.execute)(statement)  # type: ignore
+            return await db.execute(statement, **kwargs)
 
 
 class SlugRepositoryMixin(SlugRepositoryProtocol, Generic[DatabaseModelWithSlug]):
@@ -413,7 +451,7 @@ class SlugRepositoryMixin(SlugRepositoryProtocol, Generic[DatabaseModelWithSlug]
 
     async def get_by_slug(
         self,
-        db: DatabaseSession,
+        db: AsyncSession,
         slug: str,
         options: Optional[Sequence[Any]] = None,
     ) -> Optional[DatabaseModelWithSlug]:
@@ -429,7 +467,7 @@ class SlugRepositoryMixin(SlugRepositoryProtocol, Generic[DatabaseModelWithSlug]
     async def get_available_slug(
         self,
         value_to_slugify: str,
-        db: DatabaseSession,
+        db: AsyncSession,
     ) -> str:
         slug = slugify(value_to_slugify)
         if await self._is_slug_unique(slug, db):
@@ -440,24 +478,24 @@ class SlugRepositoryMixin(SlugRepositoryProtocol, Generic[DatabaseModelWithSlug]
     async def _is_slug_unique(
         self,
         slug: str,
-        db: DatabaseSession,
+        db: AsyncSession,
     ) -> bool:
         statement = select(self.model.slug).where(self.model.slug == slug)
         return await self.get_one_or_none(db, statement) is None
 
 
 class ExpiresAtMixin(ExpiresAtRepositoryProtocol, Generic[DatabaseModelWithExpiresAt]):
-    async def delete_expired(self, db: DatabaseSession) -> None:
+    async def delete_expired(self, db: AsyncSession) -> None:
         statement = delete(self.model).where(self.model.expires_at < datetime.now(timezone.utc))
         await self._execute_statement(db, statement)
 
 
-class SQLManager(SQLRepositoryMixin):
+class SQLManager(SQLRepositoryBase):
     """Simple manager to handle one off sql statements."""
 
     async def query(
         self,
-        db: DatabaseSession,
+        db: AsyncSession,
         statement: Select,
     ) -> Sequence[RowMapping] | None:
         result = await self._execute_statement(db, statement)
@@ -465,7 +503,7 @@ class SQLManager(SQLRepositoryMixin):
 
     async def query_one(
         self,
-        db: DatabaseSession,
+        db: AsyncSession,
         statement: Select,
     ) -> RowMapping | None:
         result = await self._execute_statement(db, statement)
@@ -476,14 +514,14 @@ class SQLManager(SQLRepositoryMixin):
 
     async def count(
         self,
-        db: DatabaseSession,
+        db: AsyncSession,
         statement: Select,
     ) -> int:
         """Counts the records in a query.
 
         Args:
             statement (Select): _description_
-            db (DatabaseSession): _description_
+            db (AsyncSession): _description_
 
         Returns:
             int: _description_
@@ -495,13 +533,13 @@ class SQLManager(SQLRepositoryMixin):
         results = await self._execute_statement(db, count_statement)
         return cast("int", results.scalar_one())
 
-    async def _execute_statement(self, db: DatabaseSession, statement: Select) -> Result:
+    async def _execute_statement(self, db: AsyncSession, statement: Select) -> Result:
         with self.catch_sqlalchemy_exception():
             if self._is_asyncio_session(db):
                 return await db.execute(statement)  # type: ignore
             return await run_async(db.execute)(statement)  # type: ignore
 
-    async def _execute_script(self, db: DatabaseSession, statement: Executable) -> None:
+    async def _execute_script(self, db: AsyncSession, statement: Executable) -> None:
         with self.catch_sqlalchemy_exception():
             if self._is_asyncio_session(db):
                 return await db.execute(statement)  # type: ignore
