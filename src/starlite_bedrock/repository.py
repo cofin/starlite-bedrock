@@ -38,7 +38,6 @@ from starlite_bedrock.orm import (
     DatabaseModelWithSlug,
     DatabaseModelWithSoftDelete,
 )
-from starlite_bedrock.utils.async_tools import run_async
 from starlite_bedrock.utils.text_tools import slugify
 
 __all__ = [
@@ -175,6 +174,9 @@ class BaseRepositoryProtocol(SQLRepositoryBase, Protocol[DatabaseModel]):
     async def delete(self, db: AsyncSession, db_object: DatabaseModel) -> None:
         ...  # pragma: no cover
 
+    async def execute(self, db: AsyncSession, statement: Executable, **kwargs: Any) -> Result[Any]:
+        ...  # pragma: no cover
+
     def sql_join_options(self, options: Optional[Sequence[Any]] = None) -> Sequence[Any]:
         if options:
             return options
@@ -222,7 +224,7 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
         CRUD object with default methods to create, read, update, delete (CRUD).
 
         # Parameters
-
+        * `session`: A default session object to use
         * `model`: A SQLAlchemy model class
         * `default_options`: Default options for SQL joins
         """
@@ -380,30 +382,6 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
             setattr(model, k, v)
         return model
 
-    async def update(self, data: abc.Mapping[str, Any]) -> DatabaseModel:
-        """
-        Update the model returned from `self.select` with key/val pairs from `data`.
-
-        Parameters
-        ----------
-        data : Mapping[str, Any]
-            Key/value pairs used to set attribute vals on result of `self.select`.
-
-        Returns
-        -------
-        DatabaseModel
-            The type returned by `self.select`
-
-        Raises
-        ------
-        Base.not_found_error_type
-            If `self.select` returns no rows.
-        Base.base_error_type
-            If `self.select` returns more than a single row.
-        """
-        model = await self.scalar()
-        return await self.add(self.update_model(model, data))
-
     async def update(self, db: AsyncSession, db_object: DatabaseModel, commit: bool = True) -> None:
         db.add(instance=db_object)
         if commit:
@@ -416,10 +394,12 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
             await self.commit(db)
 
     async def refresh(self, db: AsyncSession, db_object: DatabaseModel) -> None:
-        await db.refresh(db_object)
+        with self.catch_sqlalchemy_exception():
+            await db.refresh(db_object)
 
     async def commit(self, db: AsyncSession) -> None:
-        await db.commit()
+        with self.catch_sqlalchemy_exception():
+            await db.commit()
 
     @overload
     async def execute(self, db: AsyncSession, statement: TypedReturnsRows[TableRow], **kwargs: Any) -> Result[TableRow]:
@@ -490,7 +470,7 @@ class SlugRepositoryMixin(SlugRepositoryProtocol, Generic[DatabaseModelWithSlug]
 class ExpiresAtMixin(ExpiresAtRepositoryProtocol, Generic[DatabaseModelWithExpiresAt]):
     async def delete_expired(self, db: AsyncSession) -> None:
         statement = delete(self.model).where(self.model.expires_at < datetime.now(timezone.utc))
-        await self._execute_statement(db, statement)
+        await self.execute(db, statement)
 
 
 class SQLManager(SQLRepositoryBase):
@@ -501,7 +481,7 @@ class SQLManager(SQLRepositoryBase):
         db: AsyncSession,
         statement: Select,
     ) -> Sequence[RowMapping] | None:
-        result = await self._execute_statement(db, statement)
+        result = await self.execute(db, statement)
         return result.mappings().all()
 
     async def query_one(
@@ -509,7 +489,7 @@ class SQLManager(SQLRepositoryBase):
         db: AsyncSession,
         statement: Select,
     ) -> RowMapping | None:
-        result = await self._execute_statement(db, statement)
+        result = await self.execute(db, statement)
         result_set = result.mappings().all()
         if result_set:
             return result_set[0]
@@ -533,17 +513,9 @@ class SQLManager(SQLRepositoryBase):
             [sql_func.count()],
             maintain_column_froms=True,
         ).order_by(None)
-        results = await self._execute_statement(db, count_statement)
+        results = await self.execute(db, count_statement)
         return cast("int", results.scalar_one())
 
-    async def _execute_statement(self, db: AsyncSession, statement: Select) -> Result:
+    async def execute(self, db: AsyncSession, statement: Select) -> Result[Any]:
         with self.catch_sqlalchemy_exception():
-            if self._is_asyncio_session(db):
-                return await db.execute(statement)  # type: ignore
-            return await run_async(db.execute)(statement)  # type: ignore
-
-    async def _execute_script(self, db: AsyncSession, statement: Executable) -> None:
-        with self.catch_sqlalchemy_exception():
-            if self._is_asyncio_session(db):
-                return await db.execute(statement)  # type: ignore
-            return await run_async(db.execute)(statement)  # type: ignore
+            return await db.execute(statement)
