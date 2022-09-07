@@ -1,7 +1,5 @@
 from datetime import datetime, timezone
 from enum import Enum, EnumMeta
-
-# Standard Library
 from typing import Any, Generic, List, TypeVar, Union
 from uuid import UUID
 
@@ -147,9 +145,7 @@ class BaseSettings(_BaseSettings):
         env_file_encoding = "utf-8"
 
 
-
-
-BaseSchemaType = TypeVar("BaseSchemaType", bound=BaseSchema) # pylint: disable=[invalid-name]
+BaseSchemaType = TypeVar("BaseSchemaType", bound=BaseSchema)  # pylint: disable=[invalid-name]
 
 
 class TotaledResults(GenericModel, Generic[BaseSchemaType]):
