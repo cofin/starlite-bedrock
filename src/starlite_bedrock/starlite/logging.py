@@ -270,16 +270,25 @@ log_config = LoggingConfig(
     },
     handlers={
         "console": {
-            "class": "starlite_bedrock.starlite.logging.RichPicologgingHandler",
-            "formatter": "standard",
+            "()": lambda: RichPicologgingHandler(markup=True, rich_tracebacks=True),
         },
         "queue_listener": {
             "class": "starlite.logging.picologging.QueueListenerHandler",
             "handlers": ["cfg://handlers.console"],
         },
     },
-    formatters={"standard": {"format": "[%(name)s][%(funcName)s]   %(message)s"}},
+    formatters={
+        "standard": {"format": "%(message)s"},
+        "detailed": {
+            "format": "%(levelname)s %(asctime)s [%(name)s:%(filename)s:%(funcName)s:%(lineno)d]\n%(message)s\n"
+        },
+    },
     loggers={
+        "": {
+            "level": "INFO",
+            "propagate": True,
+            "handlers": ["queue_listener"],
+        },
         "starlite_bedrock": {
             "propagate": True,
         },
@@ -307,7 +316,6 @@ log_config = LoggingConfig(
         "pydantic_openapi_schema": {
             "propagate": True,
             "level": "WARNING",
-            "handlers": ["queue_listener"],
         },
     },
 )

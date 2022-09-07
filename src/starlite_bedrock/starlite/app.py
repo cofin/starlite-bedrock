@@ -1,19 +1,19 @@
 import asyncio
 from typing import TYPE_CHECKING, Optional, Union
 
+import sqlalchemy as sa
 import starlite
+from redis.asyncio import Redis
 from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
+from starlite.types import ResponseType
 
 from starlite_bedrock.client import HttpClient
-from starlite_bedrock.db import engine
-from starlite_bedrock.redis import redis
 from starlite_bedrock.starlite import cache, compression, logging, openapi, response
 from starlite_bedrock.starlite.exceptions import logging_exception_handler
 from starlite_bedrock.worker import Worker, WorkerFunction, queue
 
 if TYPE_CHECKING:
     from pydantic_openapi_schema.v3_1_0 import SecurityRequirement
-
 
 
 class Starlite(starlite.Starlite):
@@ -36,43 +36,22 @@ class Starlite(starlite.Starlite):
         self,
         route_handlers: list[starlite.types.ControllerRouterHandler],
         *,
-        after_exception: Optional[
-            starlite.types.SingleOrList[
-                starlite.types.AfterExceptionHookHandler
-            ]
-        ] = None,
+        after_exception: Optional[starlite.types.SingleOrList[starlite.types.AfterExceptionHookHandler]] = None,
         after_request: Optional[starlite.types.AfterRequestHookHandler] = None,
-        after_response: Optional[
-            starlite.types.AfterResponseHookHandler
-        ] = None,
-        after_shutdown: Optional[
-            starlite.types.SingleOrList[starlite.types.LifeSpanHookHandler]
-        ] = None,
-        after_startup: Optional[
-            starlite.types.SingleOrList[starlite.types.LifeSpanHookHandler]
-        ] = None,
+        after_response: Optional[starlite.types.AfterResponseHookHandler] = None,
+        after_shutdown: Optional[starlite.types.SingleOrList[starlite.types.LifeSpanHookHandler]] = None,
+        after_startup: Optional[starlite.types.SingleOrList[starlite.types.LifeSpanHookHandler]] = None,
         allowed_hosts: Optional[list[str]] = None,
-        before_request: Optional[
-            starlite.types.BeforeRequestHookHandler
-        ] = None,
-        before_send: Optional[
-            starlite.types.SingleOrList[
-                starlite.types.BeforeMessageSendHookHandler
-            ]
-        ] = None,
-        before_shutdown: Optional[
-            starlite.types.SingleOrList[starlite.types.LifeSpanHookHandler]
-        ] = None,
-        before_startup: Optional[
-            starlite.types.SingleOrList[starlite.types.LifeSpanHookHandler]
-        ] = None,
+        before_request: Optional[starlite.types.BeforeRequestHookHandler] = None,
+        before_send: Optional[starlite.types.SingleOrList[starlite.types.BeforeMessageSendHookHandler]] = None,
+        before_shutdown: Optional[starlite.types.SingleOrList[starlite.types.LifeSpanHookHandler]] = None,
+        before_startup: Optional[starlite.types.SingleOrList[starlite.types.LifeSpanHookHandler]] = None,
+        cache_config: Optional[starlite.config.CacheConfig] = None,
         cors_config: Optional[starlite.config.CORSConfig] = None,
         csrf_config: Optional[starlite.config.CSRFConfig] = None,
         debug: bool = False,
         dependencies: Optional[dict[str, starlite.Provide]] = None,
-        exception_handlers: Optional[
-            starlite.types.ExceptionHandlersMap
-        ] = None,
+        exception_handlers: Optional[starlite.types.ExceptionHandlersMap] = None,
         guards: Optional[list[starlite.types.Guard]] = None,
         openapi_config: Optional[starlite.OpenAPIConfig] = None,
         middleware: Optional[list[starlite.types.Middleware]] = None,
@@ -80,6 +59,7 @@ class Starlite(starlite.Starlite):
         on_startup: Optional[list[starlite.types.LifeSpanHandler]] = None,
         parameters: Optional[starlite.types.ParametersMap] = None,
         plugins: Optional[list[starlite.plugins.PluginProtocol]] = None,
+        response_class: Optional[ResponseType] = None,
         response_cookies: Optional[starlite.types.ResponseCookies] = None,
         response_headers: Optional[starlite.types.ResponseHeadersMap] = None,
         security: Optional[list["SecurityRequirement"]] = None,
@@ -91,26 +71,32 @@ class Starlite(starlite.Starlite):
         ] = None,
         tags: Optional[list[str]] = None,
         template_config: Optional[starlite.config.TemplateConfig] = None,
-        worker_functions: list[WorkerFunction | tuple[str, WorkerFunction]]
-        | None = None,
+        log_config: Optional[starlite.logging.LoggingConfig] = None,
+        db: Optional[sa.Engine] = None,
+        redis: Optional[Redis] = None,
+        worker_functions: list[WorkerFunction | tuple[str, WorkerFunction]] | None = None,
     ) -> None:
-
+        log_config = log_config or logging.log_config
         dependencies = dependencies or {}
         exception_handlers = exception_handlers or {}
-        exception_handlers.setdefault(
-            HTTP_500_INTERNAL_SERVER_ERROR, logging_exception_handler
-        )
+        exception_handlers.setdefault(HTTP_500_INTERNAL_SERVER_ERROR, logging_exception_handler)
         after_exception = after_exception or []
         openapi_config = openapi_config or openapi.config
         middleware = middleware or []
 
+        response_class = response_class or response.Response
+
         on_shutdown = on_shutdown or []
-        on_shutdown.extend(
-            [HttpClient.close, engine.dispose, redis.close]
-        )
+        on_shutdown.extend([HttpClient.close])
+        if db:
+            on_shutdown.extend([db.dispose])
+        if redis:
+            on_shutdown.extend([redis.close])
 
         on_startup = on_startup or []
-        on_startup.extend([logging.log_config.configure])
+        on_startup.extend([log_config.configure])
+
+        # custom attributes
 
         worker_functions = worker_functions or []
         # only instantiate the worker if necessary
@@ -146,10 +132,10 @@ class Starlite(starlite.Starlite):
             before_startup=before_startup,
             on_startup=on_startup,
             after_startup=after_startup,
-            openapi_config=openapi.config,
+            openapi_config=openapi_config,
             parameters=parameters,
             plugins=plugins,
-            response_class=response.Response,
+            response_class=response_class,
             response_cookies=response_cookies,
             response_headers=response_headers,
             route_handlers=route_handlers,
