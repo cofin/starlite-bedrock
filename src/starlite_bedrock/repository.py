@@ -1,7 +1,7 @@
-import abc
 import asyncio
 import random
 import string
+from collections import abc
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import (
@@ -124,6 +124,7 @@ class BaseRepositoryProtocol(SQLRepositoryBase, Protocol[DatabaseModel]):
     Args:
         Protocol (_type_): _description_
     """
+
     session: AsyncSession
     """
     Default database session to use for all operations.
@@ -136,7 +137,7 @@ class BaseRepositoryProtocol(SQLRepositoryBase, Protocol[DatabaseModel]):
     """
     Specify the default join options to use when querying the repository.
     """
-   
+
     async def paginate(
         self,
         db: AsyncSession,
@@ -210,6 +211,7 @@ class SoftDeleteRepositoryProtocol(BaseRepositoryProtocol, Protocol[DatabaseMode
 
 class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
     """Base SQL Alchemy repository."""
+
     def __init__(
         self,
         session: AsyncSession,
@@ -356,7 +358,7 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
         if commit:
             await self.commit(db)
         return db_objects
-    
+
     @staticmethod
     def update_model(model: T, data: abc.Mapping[str, Any]) -> T:
         """
@@ -401,6 +403,7 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
         """
         model = await self.scalar()
         return await self.add(self.update_model(model, data))
+
     async def update(self, db: AsyncSession, db_object: DatabaseModel, commit: bool = True) -> None:
         db.add(instance=db_object)
         if commit:
@@ -413,13 +416,13 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
             await self.commit(db)
 
     async def refresh(self, db: AsyncSession, db_object: DatabaseModel) -> None:
-        await db.refresh( db_object)
+        await db.refresh(db_object)
 
     async def commit(self, db: AsyncSession) -> None:
         await db.commit()
 
     @overload
-    async def execute(self,  db: AsyncSession,statement: TypedReturnsRows[TableRow], **kwargs: Any) -> Result[TableRow]:
+    async def execute(self, db: AsyncSession, statement: TypedReturnsRows[TableRow], **kwargs: Any) -> Result[TableRow]:
         ...
 
     @overload
