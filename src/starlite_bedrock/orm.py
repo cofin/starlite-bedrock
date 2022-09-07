@@ -183,15 +183,15 @@ def find_by_table_name(table_name: str) -> Optional["DatabaseModelType"]:
 DatabaseSession: TypeAlias = AsyncSession | Session
 DatabaseModelType = TypeVar("DatabaseModelType", bound=BaseModel)  # pylint: disable=[invalid-name]
 DatabaseModelWithSlugType = TypeVar("DatabaseModelWithSlugType", bound=SlugModelMixin)  # pylint: disable=[invalid-name]
-DatabaseModelWithIntegerPrimaryKeyType = TypeVar(
+DatabaseModelWithIntegerPrimaryKeyType = TypeVar(  # pylint: disable=[invalid-name]
     "DatabaseModelWithIntegerPrimaryKeyType", bound=IntegerPrimaryKeyMixin
-)  # pylint: disable=[invalid-name]
-DatabaseModelWithCreatedUpdatedAtType = TypeVar(
+)
+DatabaseModelWithCreatedUpdatedAtType = TypeVar(  # pylint: disable=[invalid-name]
     "DatabaseModelWithCreatedUpdatedAtType", bound=CreatedUpdatedAtMixin
-)  # pylint: disable=[invalid-name]
-DatabaseModelWithExpiresAtType = TypeVar(
+)
+DatabaseModelWithExpiresAtType = TypeVar(  # pylint: disable=[invalid-name]
     "DatabaseModelWithExpiresAtType", bound=ExpiresAtMixin
-)  # pylint: disable=[invalid-name]
-DatabaseModelWithSoftDeleteType = TypeVar(
+)
+DatabaseModelWithSoftDeleteType = TypeVar(  # pylint: disable=[invalid-name]
     "DatabaseModelWithSoftDeleteType", bound=SoftDeleteMixin
-)  # pylint: disable=[invalid-name]
+)
