@@ -3,18 +3,18 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Optional, TypeAlias, TypeVar
 
-from sqlalchemy import BigInteger, Boolean, Column, Identity, MetaData, String
+import sqlalchemy as sa
+from sqlalchemy import orm
 from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy.event import listens_for
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.orm import DeclarativeBase, Mapped, Session
-from sqlalchemy.orm import registry as orm_registry
+from sqlalchemy.orm import DeclarativeBase, Session
 from sqlalchemy.orm.decl_api import declarative_mixin, declared_attr
 from sqlalchemy.sql import func as sql_func
 from sqlalchemy.sql.expression import FunctionElement
 
-from starlite_bedrock.db_types import GUID, DateTime
+from starlite_bedrock import db_types as t
 
 if TYPE_CHECKING:
     from pydantic import UUID4
@@ -31,11 +31,11 @@ convention = {
 Templates for automated constraint name generation.
 """
 
-meta = MetaData(naming_convention=convention)
-mapper_registry: orm_registry = orm_registry(metadata=meta, type_annotation_map={uuid.UUID: pg.UUID, dict: pg.JSONB})
+meta = sa.MetaData(naming_convention=convention)
+mapper_registry: orm.registry = orm.registry(metadata=meta, type_annotation_map={uuid.UUID: pg.UUID, dict: pg.JSONB})
 
 
-@listens_for(Session, "before_flush")
+@listens_for(orm.Session, "before_flush")
 def touch_updated_timestamp(session: Session, *_: Any) -> None:
     """
     Called from SQLAlchemy's [`before_flush`][sqlalchemy.orm.SessionEvents.before_flush] event to
@@ -78,8 +78,8 @@ class BaseModel(DeclarativeBase):
     # or SQL expression defaults, subsequent to a flush, without
     # triggering an expired load
     __mapper_args__ = {"eager_defaults": True}
-    id: Mapped["UUID4"] = Column(  # type: ignore
-        GUID,
+    id: orm.Mapped["UUID4"] = sa.Column(  # type: ignore
+        t.GUID,
         primary_key=True,
         default=uuid.uuid4,
         unique=True,
@@ -106,19 +106,21 @@ class BaseModel(DeclarativeBase):
 class IntegerPrimaryKeyMixin:
     """GUID Column Mixin"""
 
-    id: Mapped["int"] = Column(BigInteger, Identity(always=True), primary_key=True, unique=True, nullable=False)
+    id: orm.Mapped["int"] = sa.Column(
+        sa.BigInteger, sa.Identity(always=True), primary_key=True, unique=True, nullable=False
+    )
     id._creation_order = 1  # type: ignore[attr-defined] # pylint: disable=[protected-access]
 
 
 @declarative_mixin
 class SlugModelMixin:
-    slug: Mapped["str"] = Column(String(length=100), index=True, nullable=False, unique=True)
+    slug: orm.Mapped["str"] = sa.Column(sa.String(length=100), index=True, nullable=False, unique=True)
     slug._creation_order = 2  # type: ignore[attr-defined] # pylint: disable=[protected-access]
 
 
 @declarative_mixin
 class SoftDeleteMixin:
-    is_deleted: Mapped[bool] = Column(Boolean, index=True, nullable=False, default=False)
+    is_deleted: orm.Mapped[bool] = sa.Column(sa.Boolean, index=True, nullable=False, default=False)
     is_deleted._creation_order = 999  # type: ignore[attr-defined] # pylint: disable=[protected-access]
 
 
@@ -126,8 +128,8 @@ class SoftDeleteMixin:
 class CreatedUpdatedAtMixin:
     """Created At/Updated At Mixin"""
 
-    created_at: Mapped[datetime] = Column(
-        DateTime(timezone=True),
+    created_at: orm.Mapped[datetime] = sa.Column(
+        t.DateTime(timezone=True),
         nullable=False,
         index=True,
         default=datetime.now(timezone.utc),
@@ -135,8 +137,8 @@ class CreatedUpdatedAtMixin:
         comment="Date the record was inserted",
     )
     created_at._creation_order = 9998  # type: ignore[attr-defined] # pylint: disable=[protected-access]
-    updated_at: Mapped[datetime] = Column(
-        DateTime(timezone=True),
+    updated_at: orm.Mapped[datetime] = sa.Column(
+        t.DateTime(timezone=True),
         nullable=True,
         index=True,
         server_default=None,
@@ -156,9 +158,9 @@ class ExpiresAtMixin:
     __lifetime_seconds__: int = 3600
 
     @declared_attr
-    def expires_at(cls) -> Column[DateTime]:  # pylint: disable=[no-self-argument]
-        return Column(
-            DateTime(timezone=True),
+    def expires_at(cls) -> orm.Mapped[datetime]:  # pylint: disable=[no-self-argument]
+        return sa.Column(
+            t.DateTime(timezone=True),
             nullable=False,
             index=True,
             default=functools.partial(
