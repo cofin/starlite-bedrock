@@ -8,7 +8,7 @@ from typing import Literal
 
 from pydantic import AnyUrl, PostgresDsn
 
-from starlite_bedrock.schema import BaseSettings
+from starlite_bedrock.schema import BaseSchema, BaseSettings
 
 
 # noinspection PyUnresolvedReferences
@@ -155,6 +155,25 @@ class CacheSettings(BaseSettings):
         case_sensitive = True
 
     URL: AnyUrl
+
+
+class Settings(BaseSchema):
+    """
+    Cache settings for the application.
+
+    Prefix all environment variables with `CACHE_`, e.g., `CACHE_URL`.
+
+    Attributes
+    ----------
+    URL : AnyUrl
+        A redis connection URL.
+    """
+
+    api: APISettings
+    app: AppSettings
+    cache: CacheSettings
+    db: DatabaseSettings
+    openapi: OpenAPISettings
 
 
 api_settings = APISettings()
