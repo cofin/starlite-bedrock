@@ -75,7 +75,7 @@ class RepositoryNotFoundException(RepositoryException):
     """
 
 
-class SQLRepositoryBase(Protocol):
+class SQLAlchemyRepositoryBase(Protocol):
     """Basic repository interface for SQL."""
 
     session: AsyncSession
@@ -136,7 +136,7 @@ class SQLRepositoryBase(Protocol):
         return isinstance(db, AsyncSession)
 
 
-class BaseRepositoryProtocol(SQLRepositoryBase, Protocol[DatabaseModel]):
+class BaseRepositoryProtocol(SQLAlchemyRepositoryBase, Protocol[DatabaseModel]):
     """_summary_
 
     Args:
@@ -370,10 +370,11 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
             await self.commit()
             await self.refresh(db_object)
 
-    async def delete(self, db_object: DatabaseModel, commit: bool = False) -> None:
-        await self.delete(db_object)
-        if commit:
-            await self.commit()
+    async def delete(self, db_object: DatabaseModel, commit: bool = True) -> None:
+        with self.catch_sqlalchemy_exception():
+            await self.session.delete(db_object)
+            if commit:
+                await self.commit()
 
     async def refresh(self, db_object: DatabaseModel) -> None:
         with self.catch_sqlalchemy_exception():
@@ -440,7 +441,7 @@ class ExpiresAtMixin(ExpiresAtRepositoryProtocol, Generic[DatabaseModelWithExpir
         await self.execute(statement)
 
 
-class SQLManager(SQLRepositoryBase):
+class SQLManager(SQLAlchemyRepositoryBase):
     """Simple manager to handle one off sql statements."""
 
     async def query(
