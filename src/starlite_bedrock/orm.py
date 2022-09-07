@@ -168,10 +168,10 @@ class ExpiresAtMixin:
         )
 
 
-def find_by_table_name(table_name: str) -> Optional["DatabaseModel"]:
+def find_by_table_name(table_name: str) -> Optional["DatabaseModelType"]:
     """Return model based on class"""
     for mapper in mapper_registry.mappers:
-        model: DatabaseModel = mapper.class_  # type: ignore
+        model: DatabaseModelType = mapper.class_  # type: ignore
         model_class_name = model.__tablename__
         if model_class_name == table_name:
             return model
@@ -179,9 +179,9 @@ def find_by_table_name(table_name: str) -> Optional["DatabaseModel"]:
 
 
 DatabaseSession: TypeAlias = AsyncSession | Session
-DatabaseModel = TypeVar("DatabaseModel", bound=BaseModel)
-DatabaseModelWithSlug = TypeVar("DatabaseModelWithSlug", bound=SlugModelMixin)
-DatabaseModelWithIntegerPrimaryKey = TypeVar("DatabaseModelWithIntegerPrimaryKey", bound=IntegerPrimaryKeyMixin)
-DatabaseModelWithCreatedUpdatedAt = TypeVar("DatabaseModelWithCreatedUpdatedAt", bound=CreatedUpdatedAtMixin)
-DatabaseModelWithExpiresAt = TypeVar("DatabaseModelWithExpiresAt", bound=ExpiresAtMixin)
-DatabaseModelWithSoftDelete = TypeVar("DatabaseModelWithSoftDelete", bound=SoftDeleteMixin)
+DatabaseModelType = TypeVar("DatabaseModelType", bound=BaseModel)
+DatabaseModelWithSlugType = TypeVar("DatabaseModelWithSlugType", bound=SlugModelMixin)
+DatabaseModelWithIntegerPrimaryKeyType = TypeVar("DatabaseModelWithIntegerPrimaryKeyType", bound=IntegerPrimaryKeyMixin)
+DatabaseModelWithCreatedUpdatedAtType = TypeVar("DatabaseModelWithCreatedUpdatedAtType", bound=CreatedUpdatedAtMixin)
+DatabaseModelWithExpiresAtType = TypeVar("DatabaseModelWithExpiresAtType", bound=ExpiresAtMixin)
+DatabaseModelWithSoftDeleteType = TypeVar("DatabaseModelWithSoftDeleteType", bound=SoftDeleteMixin)

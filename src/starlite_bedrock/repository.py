@@ -32,11 +32,11 @@ from sqlalchemy.sql import select
 from sqlalchemy.sql.selectable import TypedReturnsRows
 
 from starlite_bedrock.orm import (
-    DatabaseModel,
-    DatabaseModelWithCreatedUpdatedAt,
-    DatabaseModelWithExpiresAt,
-    DatabaseModelWithSlug,
-    DatabaseModelWithSoftDelete,
+    DatabaseModelType,
+    DatabaseModelWithCreatedUpdatedAtType,
+    DatabaseModelWithExpiresAtType,
+    DatabaseModelWithSlugType,
+    DatabaseModelWithSoftDeleteType,
 )
 from starlite_bedrock.utils.text_tools import slugify
 
@@ -136,14 +136,14 @@ class SQLAlchemyRepositoryBase(Protocol):
         return isinstance(db, AsyncSession)
 
 
-class BaseRepositoryProtocol(SQLAlchemyRepositoryBase, Protocol[DatabaseModel]):
+class BaseRepositoryProtocol(SQLAlchemyRepositoryBase, Protocol[DatabaseModelType]):
     """_summary_
 
     Args:
         Protocol (_type_): _description_
     """
 
-    model: Type[DatabaseModel]
+    model: Type[DatabaseModelType]
     """
     A model that extends [`DeclarativeBase`][sqlalchemy.orm.DeclarativeBase]. Must be set by concrete subclasses.
     """
@@ -152,31 +152,31 @@ class BaseRepositoryProtocol(SQLAlchemyRepositoryBase, Protocol[DatabaseModel]):
     Specify the default join options to use when querying the repository.
     """
 
-    async def paginate(self, statement: Select, limit: int = 10, offset: int = 0) -> Tuple[List[DatabaseModel], int]:
+    async def paginate(self, statement: Select, limit: int = 10, offset: int = 0) -> Tuple[List[DatabaseModelType], int]:
         ...  # pragma: no cover
 
     def order_by(self, statement: Select, ordering: List[Tuple[List[str], bool]]) -> Select:
         ...  # pragma: no cover
 
-    async def get_by_id(self, id: Union[UUID4, int]) -> Optional[DatabaseModel]:  # pylint: disable=[redefined-builtin]
+    async def get_by_id(self, id: Union[UUID4, int]) -> Optional[DatabaseModelType]:  # pylint: disable=[redefined-builtin]
         ...  # pragma: no cover
 
-    async def get(self, id: Union[UUID4, int]) -> Optional[DatabaseModel]:  # pylint: disable=[redefined-builtin]
+    async def get(self, id: Union[UUID4, int]) -> Optional[DatabaseModelType]:  # pylint: disable=[redefined-builtin]
         ...  # pragma: no cover
 
-    async def get_one_or_none(self, statement: Select) -> Optional[DatabaseModel]:
+    async def get_one_or_none(self, statement: Select) -> Optional[DatabaseModelType]:
         ...  # pragma: no cover
 
-    async def list(self, statement: Select) -> List[DatabaseModel]:
+    async def list(self, statement: Select) -> List[DatabaseModelType]:
         ...  # pragma: no cover
 
-    async def create(self, db_object: DatabaseModel) -> DatabaseModel:
+    async def create(self, db_object: DatabaseModelType) -> DatabaseModelType:
         ...  # pragma: no cover
 
-    async def update(self, db_object: DatabaseModel) -> None:
+    async def update(self, db_object: DatabaseModelType) -> None:
         ...  # pragma: no cover
 
-    async def delete(self, db_object: DatabaseModel) -> None:
+    async def delete(self, db_object: DatabaseModelType) -> None:
         ...  # pragma: no cover
 
     def sql_join_options(self, options: Optional[Sequence[Any]] = None) -> Sequence[Any]:
@@ -187,38 +187,38 @@ class BaseRepositoryProtocol(SQLAlchemyRepositoryBase, Protocol[DatabaseModel]):
         return []
 
 
-class ExpiresAtRepositoryProtocol(BaseRepositoryProtocol, Protocol[DatabaseModelWithExpiresAt]):
-    model: Type[DatabaseModelWithExpiresAt]
+class ExpiresAtRepositoryProtocol(BaseRepositoryProtocol, Protocol[DatabaseModelWithExpiresAtType]):
+    model: Type[DatabaseModelWithExpiresAtType]
 
     async def delete_expired(self, db: AsyncSession) -> None:
         ...  # pragma: no cover
 
 
-class CreatedUpdatedAtRepositoryProtocol(BaseRepositoryProtocol, Protocol[DatabaseModelWithCreatedUpdatedAt]):
-    model: Type[DatabaseModelWithCreatedUpdatedAt]
+class CreatedUpdatedAtRepositoryProtocol(BaseRepositoryProtocol, Protocol[DatabaseModelWithCreatedUpdatedAtType]):
+    model: Type[DatabaseModelWithCreatedUpdatedAtType]
 
 
-class SlugRepositoryProtocol(BaseRepositoryProtocol, Protocol[DatabaseModelWithSlug]):
-    model: Type[DatabaseModelWithSlug]
+class SlugRepositoryProtocol(BaseRepositoryProtocol, Protocol[DatabaseModelWithSlugType]):
+    model: Type[DatabaseModelWithSlugType]
 
     async def get_by_slug(
         self,
         slug: str,
-    ) -> Optional[DatabaseModelWithSlug]:
+    ) -> Optional[DatabaseModelWithSlugType]:
         ...  # pragma: no cover
 
 
-class SoftDeleteRepositoryProtocol(BaseRepositoryProtocol, Protocol[DatabaseModelWithSoftDelete]):
-    model: Type[DatabaseModelWithSoftDelete]
+class SoftDeleteRepositoryProtocol(BaseRepositoryProtocol, Protocol[DatabaseModelWithSoftDeleteType]):
+    model: Type[DatabaseModelWithSoftDeleteType]
 
 
-class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
+class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModelType]):
     """Base SQL Alchemy repository."""
 
     def __init__(
         self,
         session: AsyncSession,
-        model: Type[DatabaseModel],
+        model: Type[DatabaseModelType],
         default_options: Optional[list] = None,
     ) -> None:
         """
@@ -241,7 +241,7 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
         results = await self.execute(count_statement)
         return results.scalar_one()  # type: ignore
 
-    async def paginate(self, statement: Select, limit: int = 10, offset: int = 0) -> Tuple[List[DatabaseModel], int]:
+    async def paginate(self, statement: Select, limit: int = 10, offset: int = 0) -> Tuple[List[DatabaseModelType], int]:
         paginated_statement = statement.offset(offset).limit(limit)
 
         [count, results] = await asyncio.gather(self.count(statement), self.execute(paginated_statement))
@@ -280,7 +280,7 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
                     statement = statement.order_by(field.desc() if is_desc else field.asc())
         return statement
 
-    async def get_one_or_none(self, statement: Select, options: Optional[List[Any]] = None) -> Optional[DatabaseModel]:
+    async def get_one_or_none(self, statement: Select, options: Optional[List[Any]] = None) -> Optional[DatabaseModelType]:
         statement.options(*self.sql_join_options(options)).execution_options(populate_existing=True)
         results = await self.execute(statement)
         db_object = results.first()
@@ -292,7 +292,7 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
         self,
         id: Union[int, UUID4],  # pylint: disable=[redefined-builtin]
         options: Optional[list] = None,
-    ) -> Optional[DatabaseModel]:
+    ) -> Optional[DatabaseModelType]:
         """_summary_
 
         Args:
@@ -312,7 +312,7 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
 
         return await self.get_one_or_none(statement)
 
-    async def list(self, statement: Optional[Select] = None, options: Optional[list] = None) -> List[DatabaseModel]:
+    async def list(self, statement: Optional[Select] = None, options: Optional[list] = None) -> List[DatabaseModelType]:
         if statement is None:
             statement = (
                 select(self.model).options(*self.sql_join_options(options)).execution_options(populate_existing=True)
@@ -322,9 +322,9 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
 
     async def create(
         self,
-        db_object: DatabaseModel,
+        db_object: DatabaseModelType,
         commit: bool = True,
-    ) -> DatabaseModel:
+    ) -> DatabaseModelType:
         self.session.add(instance=db_object)
         if commit:
             await self.commit()
@@ -333,9 +333,9 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
 
     async def create_many(
         self,
-        db_objects: List[DatabaseModel],
+        db_objects: List[DatabaseModelType],
         commit: bool = True,
-    ) -> List[DatabaseModel]:
+    ) -> List[DatabaseModelType]:
         """Create Many"""
         for db_object in db_objects:
             self.session.add(instance=db_object)
@@ -364,19 +364,19 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
             setattr(model, k, v)
         return model
 
-    async def update(self, db_object: DatabaseModel, commit: bool = True) -> None:
+    async def update(self, db_object: DatabaseModelType, commit: bool = True) -> None:
         self.session.add(instance=db_object)
         if commit:
             await self.commit()
             await self.refresh(db_object)
 
-    async def delete(self, db_object: DatabaseModel, commit: bool = True) -> None:
+    async def delete(self, db_object: DatabaseModelType, commit: bool = True) -> None:
         with self.catch_sqlalchemy_exception():
             await self.session.delete(db_object)
             if commit:
                 await self.commit()
 
-    async def refresh(self, db_object: DatabaseModel) -> None:
+    async def refresh(self, db_object: DatabaseModelType) -> None:
         with self.catch_sqlalchemy_exception():
             await self.session.refresh(db_object)
 
@@ -400,14 +400,14 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModel]):
             return await self.session.execute(statement, **kwargs)
 
 
-class SlugRepositoryMixin(SlugRepositoryProtocol, Generic[DatabaseModelWithSlug]):
+class SlugRepositoryMixin(SlugRepositoryProtocol, Generic[DatabaseModelWithSlugType]):
     """Slug Repository Mixin."""
 
     async def get_by_slug(
         self,
         slug: str,
         options: Optional[Sequence[Any]] = None,
-    ) -> Optional[DatabaseModelWithSlug]:
+    ) -> Optional[DatabaseModelWithSlugType]:
         statement = (
             select(self.model)
             .where(self.model.slug == slug)
@@ -435,7 +435,7 @@ class SlugRepositoryMixin(SlugRepositoryProtocol, Generic[DatabaseModelWithSlug]
         return await self.get_one_or_none(statement) is None
 
 
-class ExpiresAtMixin(ExpiresAtRepositoryProtocol, Generic[DatabaseModelWithExpiresAt]):
+class ExpiresAtMixin(ExpiresAtRepositoryProtocol, Generic[DatabaseModelWithExpiresAtType]):
     async def delete_expired(self, db: AsyncSession) -> None:
         statement = delete(self.model).where(self.model.expires_at < datetime.now(timezone.utc))
         await self.execute(statement)
