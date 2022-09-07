@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Any
 import orjson
 import saq
 
-from .db import async_session_factory
-from .redis import redis
+from starlite_bedrock.db import async_session_factory
+from starlite_bedrock.redis import redis
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession  # noqa:F401
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 WorkerFunction = abc.Callable[..., abc.Awaitable[Any]]
 
 
-class Queue(saq.Queue):
+class Queue(saq.Queue):  # type: ignore
     """
     [SAQ Queue](https://github.com/tobymao/saq/blob/master/saq/queue.py)
 
@@ -63,7 +63,7 @@ def get_session_from_context(ctx: dict) -> "AsyncSession":
     return ctx["session"]  # type:ignore[no-any-return]
 
 
-class Worker(saq.Worker):
+class Worker(saq.Worker):  # type: ignore
     """
     [SAQ worker](https://github.com/tobymao/saq/blob/master/saq/worker.py).
 
