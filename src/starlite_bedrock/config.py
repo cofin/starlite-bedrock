@@ -78,7 +78,6 @@ class APISettings(BaseSettings):
     HEALTH_PATH: str = "/health"
 
 
-
 # noinspection PyUnresolvedReferences
 class OpenAPISettings(BaseSettings):
     """
@@ -106,6 +105,7 @@ class OpenAPISettings(BaseSettings):
     VERSION: str = "v1"
     CONTACT_NAME: str = "Admin"
     CONTACT_EMAIL: str = "admin@localhost"
+
 
 # noinspection PyUnresolvedReferences
 class DatabaseSettings(BaseSettings):
