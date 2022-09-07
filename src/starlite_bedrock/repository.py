@@ -161,8 +161,8 @@ class BaseRepositoryProtocol(SQLAlchemyRepositoryBase, Protocol[DatabaseModelTyp
         ...  # pragma: no cover
 
     async def get_by_id(
-        self, id: Union[UUID4, int]
-    ) -> Optional[DatabaseModelType]:  # pylint: disable=[redefined-builtin]
+        self, id: Union[UUID4, int]  # pylint: disable=[redefined-builtin]
+    ) -> Optional[DatabaseModelType]:
         ...  # pragma: no cover
 
     async def get(self, id: Union[UUID4, int]) -> Optional[DatabaseModelType]:  # pylint: disable=[redefined-builtin]
@@ -183,18 +183,11 @@ class BaseRepositoryProtocol(SQLAlchemyRepositoryBase, Protocol[DatabaseModelTyp
     async def delete(self, db_object: DatabaseModelType) -> None:
         ...  # pragma: no cover
 
-    def sql_join_options(self, options: Optional[Sequence[Any]] = None) -> Sequence[Any]:
-        if options:
-            return options
-        if self.default_options:
-            return self.default_options
-        return []
-
 
 class ExpiresAtRepositoryProtocol(BaseRepositoryProtocol, Protocol[DatabaseModelWithExpiresAtType]):
     model: Type[DatabaseModelWithExpiresAtType]
 
-    async def delete_expired(self, db: AsyncSession) -> None:
+    async def delete_expired(self) -> None:
         ...  # pragma: no cover
 
 
@@ -223,7 +216,6 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModelType]):
         self,
         session: AsyncSession,
         model: Type[DatabaseModelType],
-        default_options: Optional[list] = None,
     ) -> None:
         """
         CRUD object with default methods to create, read, update, delete (CRUD).
@@ -235,7 +227,6 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModelType]):
         """
         self.session = session
         self.model = model
-        self.default_options = default_options if default_options else []
 
     async def count(self, statement: Select) -> int:
         count_statement = statement.with_only_columns(  # type: ignore[call-overload]
@@ -289,7 +280,8 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModelType]):
     async def get_one_or_none(
         self, statement: Select, options: Optional[List[Any]] = None
     ) -> Optional[DatabaseModelType]:
-        statement.options(*self.sql_join_options(options)).execution_options(populate_existing=True)
+        options = options or []
+        statement.options(*options).execution_options(populate_existing=True)
         results = await self.execute(statement)
         db_object = results.first()
         if db_object is None:
@@ -311,20 +303,17 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModelType]):
         Returns:
             Optional[DatabaseModel]: _description_
         """
+        options = options or []
         statement = (
-            select(self.model)
-            .where(self.model.id == id)
-            .options(*self.sql_join_options(options))
-            .execution_options(populate_existing=True)
+            select(self.model).where(self.model.id == id).options(*options).execution_options(populate_existing=True)
         )
 
         return await self.get_one_or_none(statement)
 
     async def list(self, statement: Optional[Select] = None, options: Optional[list] = None) -> List[DatabaseModelType]:
+        options = options or []
         if statement is None:
-            statement = (
-                select(self.model).options(*self.sql_join_options(options)).execution_options(populate_existing=True)
-            )
+            statement = select(self.model).options(*options).execution_options(populate_existing=True)
         results = await self.execute(statement)
         return [result[0] for result in results.unique().all()]
 
@@ -416,10 +405,11 @@ class SlugRepositoryMixin(SlugRepositoryProtocol, Generic[DatabaseModelWithSlugT
         slug: str,
         options: Optional[Sequence[Any]] = None,
     ) -> Optional[DatabaseModelWithSlugType]:
+        options = options or []
         statement = (
             select(self.model)
             .where(self.model.slug == slug)
-            .options(*self.sql_join_options(options=options))
+            .options(*options)
             .execution_options(populate_existing=True)
         )
 
@@ -444,7 +434,7 @@ class SlugRepositoryMixin(SlugRepositoryProtocol, Generic[DatabaseModelWithSlugT
 
 
 class ExpiresAtMixin(ExpiresAtRepositoryProtocol, Generic[DatabaseModelWithExpiresAtType]):
-    async def delete_expired(self, db: AsyncSession) -> None:
+    async def delete_expired(self) -> None:
         statement = delete(self.model).where(self.model.expires_at < datetime.now(timezone.utc))
         await self.execute(statement)
 

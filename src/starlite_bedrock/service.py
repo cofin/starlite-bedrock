@@ -45,17 +45,21 @@ class DataAccessService(Generic[orm.DatabaseModelType, RepositoryType, SchemaTyp
     paginated_schema_type: Type[schema.PaginatedResults[SchemaType]]
     """A [`schema.Base`][starlite_lib.schema.Base] concrete subclass."""
     exclude_keys = {"created_at", "updated_at"}
+    default_options: Optional[List[Any]] = None
+    """
+    Specify the default join options to use when querying the repository.
+    """
 
     def __init__(
         self,
         session: AsyncSession,
         *,
-        default_options: Optional[List[Any]] = None,
+        options: Optional[List[Any]] = None,
         **kwargs: Any,
     ) -> None:
         self.session = session
-        self.default_options = default_options or []
-        self.repository = self.repository_type(session=session, default_options=default_options, **kwargs)
+        self.default_options = self.join_options(options)
+        self.repository = self.repository_type(session=session, **kwargs)
         self.response_model = self.schema_type
 
     async def get_by_id(
@@ -73,7 +77,7 @@ class DataAccessService(Generic[orm.DatabaseModelType, RepositoryType, SchemaTyp
         Returns:
             Returns `None` on unsuccessful search`.
         """
-        options = options or self.default_options
+        options = self.join_options(options)
         db_obj = await self.repository.get_by_id(id, options=options, **kwargs)
         if db_obj:
             return self.schema_type.from_orm(db_obj)
@@ -98,16 +102,12 @@ class DataAccessService(Generic[orm.DatabaseModelType, RepositoryType, SchemaTyp
         Returns:
             Returns a paginated response
         """
-        options = options or self.default_options
+        options = self.join_options(options)
 
         statement = (
-            select(self.model)
-            .filter(*args)
-            .filter_by(**kwargs)
-            .options(*options)
-            .execution_options(populate_existing=True)
+            select(self.model).filter(*args).filter_by(**kwargs).execution_options(populate_existing=True)
         )  # this is important!
-        db_obj = await self.repository.get_one_or_none(statement)
+        db_obj = await self.repository.get_one_or_none(statement, options=options)
         if db_obj:
             return self.schema_type.from_orm(db_obj)
         return None
@@ -135,7 +135,7 @@ class DataAccessService(Generic[orm.DatabaseModelType, RepositoryType, SchemaTyp
         Returns:
             Returns a paginated response
         """
-        options = options or self.default_options
+        options = self.join_options(options)
         sort = sort_order.value if sort_order else TableSortOrder.DESCENDING.value
         order: Any = self.model.id  # default to PK
         if order_by:
@@ -179,7 +179,7 @@ class DataAccessService(Generic[orm.DatabaseModelType, RepositoryType, SchemaTyp
         Returns:
             Returns a paginated response
         """
-        options = options or self.default_options
+        options = self.join_options(options)
 
         statement = (
             select(self.model)
@@ -257,3 +257,10 @@ class DataAccessService(Generic[orm.DatabaseModelType, RepositoryType, SchemaTyp
         async with db.async_session_factory() as session:
             async with session.begin():
                 yield cls(session, **kwargs)
+
+    def join_options(self, options: Optional[List[Any]] = None) -> List[Any]:
+        if options:
+            return options
+        if self.default_options:
+            return self.default_options
+        return []
