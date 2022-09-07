@@ -6,7 +6,9 @@ Take not of the environment variable prefixes required for each settings class, 
 """
 from typing import Literal
 
-from pydantic import AnyUrl, BaseSettings, PostgresDsn
+from pydantic import AnyUrl, PostgresDsn
+
+from starlite_bedrock.schema import BaseSettings
 
 
 # noinspection PyUnresolvedReferences

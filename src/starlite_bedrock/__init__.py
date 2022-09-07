@@ -26,6 +26,7 @@ __all__ = [
     "endpoint_decorator",
     "orm",
     "repository",
+    "run",
     "schema",
     "starlite",
 ]
