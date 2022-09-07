@@ -152,13 +152,17 @@ class BaseRepositoryProtocol(SQLAlchemyRepositoryBase, Protocol[DatabaseModelTyp
     Specify the default join options to use when querying the repository.
     """
 
-    async def paginate(self, statement: Select, limit: int = 10, offset: int = 0) -> Tuple[List[DatabaseModelType], int]:
+    async def paginate(
+        self, statement: Select, limit: int = 10, offset: int = 0
+    ) -> Tuple[List[DatabaseModelType], int]:
         ...  # pragma: no cover
 
     def order_by(self, statement: Select, ordering: List[Tuple[List[str], bool]]) -> Select:
         ...  # pragma: no cover
 
-    async def get_by_id(self, id: Union[UUID4, int]) -> Optional[DatabaseModelType]:  # pylint: disable=[redefined-builtin]
+    async def get_by_id(
+        self, id: Union[UUID4, int]
+    ) -> Optional[DatabaseModelType]:  # pylint: disable=[redefined-builtin]
         ...  # pragma: no cover
 
     async def get(self, id: Union[UUID4, int]) -> Optional[DatabaseModelType]:  # pylint: disable=[redefined-builtin]
@@ -241,7 +245,9 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModelType]):
         results = await self.execute(count_statement)
         return results.scalar_one()  # type: ignore
 
-    async def paginate(self, statement: Select, limit: int = 10, offset: int = 0) -> Tuple[List[DatabaseModelType], int]:
+    async def paginate(
+        self, statement: Select, limit: int = 10, offset: int = 0
+    ) -> Tuple[List[DatabaseModelType], int]:
         paginated_statement = statement.offset(offset).limit(limit)
 
         [count, results] = await asyncio.gather(self.count(statement), self.execute(paginated_statement))
@@ -280,13 +286,15 @@ class BaseRepository(BaseRepositoryProtocol, Generic[DatabaseModelType]):
                     statement = statement.order_by(field.desc() if is_desc else field.asc())
         return statement
 
-    async def get_one_or_none(self, statement: Select, options: Optional[List[Any]] = None) -> Optional[DatabaseModelType]:
+    async def get_one_or_none(
+        self, statement: Select, options: Optional[List[Any]] = None
+    ) -> Optional[DatabaseModelType]:
         statement.options(*self.sql_join_options(options)).execution_options(populate_existing=True)
         results = await self.execute(statement)
         db_object = results.first()
         if db_object is None:
             return None
-        return cast("DatabaseModel", db_object[0])
+        return cast("DatabaseModelType", db_object[0])
 
     async def get_by_id(
         self,

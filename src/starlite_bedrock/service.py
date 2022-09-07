@@ -35,13 +35,14 @@ class DataAccessService(Generic[orm.DatabaseModelType, RepositoryType, SchemaTyp
     This class is used to provide a common interface for all CRUD operations.
     """
 
-    model: type[orm.DatabaseModelType]
-    repository_type: type[RepositoryType]
+    model: Type[orm.DatabaseModelType]
+    repository_type: Type[RepositoryType]
     """A [`repository.Base`][starlite_lib.repository.Base] concrete subclass."""
-    schema_type: type[SchemaType]
+    schema_type: Type[SchemaType]
+    list_of_schema_type: Type[List[SchemaType]]
     create_schema_type: Type[CreateSchemaType]
     update_schema_type: Type[UpdateSchemaType]
-
+    paginated_schema_type: Type[schema.PaginatedResults[SchemaType]]
     """A [`schema.Base`][starlite_lib.schema.Base] concrete subclass."""
     exclude_keys = {"created_at", "updated_at"}
 
@@ -55,7 +56,7 @@ class DataAccessService(Generic[orm.DatabaseModelType, RepositoryType, SchemaTyp
         self.session = session
         self.default_options = default_options or []
         self.repository = self.repository_type(session=session, default_options=default_options, **kwargs)
-        self.paginated_schema_type = 
+        self.response_model = self.schema_type
 
     async def get_by_id(
         self,
@@ -155,8 +156,8 @@ class DataAccessService(Generic[orm.DatabaseModelType, RepositoryType, SchemaTyp
             .execution_options(populate_existing=True)
         )  # this is important!
         results, count = await self.repository.paginate(statement, limit, skip)
-        
-        return schema.PaginatedResults[self.schema_type].parse_obj(
+
+        return self.paginated_schema_type.parse_obj(
             {"count": count, "limit": limit, "skip": skip, "results": results},
         )
 
@@ -186,9 +187,9 @@ class DataAccessService(Generic[orm.DatabaseModelType, RepositoryType, SchemaTyp
             .filter_by(**kwargs)
             .options(*options)
             .execution_options(populate_existing=True)
-        ) 
+        )
         results = await self.repository.list(statement)
-        return parse_obj_as(List[self.schema_type], results)
+        return parse_obj_as(self.list_of_schema_type, results)
 
     async def create(
         self,
@@ -234,7 +235,7 @@ class DataAccessService(Generic[orm.DatabaseModelType, RepositoryType, SchemaTyp
 
     async def remove(
         self,
-        id: Union[int, UUID4],
+        id: Union[int, UUID4],  # pylint: disable=redefined-builtin
     ) -> Optional[SchemaType]:
         """Delete model instance by `identifier`.
 
@@ -249,11 +250,10 @@ class DataAccessService(Generic[orm.DatabaseModelType, RepositoryType, SchemaTyp
             await self.repository.delete(db_obj)
             return self.schema_type.from_orm(db_obj)
         return None
-    
+
     @classmethod
     @asynccontextmanager
-    async def with_session(cls: type[DataAccessServiceType], **kwargs: Any) -> abc.AsyncIterator[ServiceType]:
+    async def with_session(cls: type[DataAccessServiceType], **kwargs: Any) -> abc.AsyncIterator[DataAccessServiceType]:
         async with db.async_session_factory() as session:
             async with session.begin():
                 yield cls(session, **kwargs)
-
