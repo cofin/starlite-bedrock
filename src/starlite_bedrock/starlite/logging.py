@@ -279,15 +279,11 @@ log_config = LoggingConfig(
     },
     formatters={
         "standard": {"format": "%(message)s"},
-        "detailed": {
-            "format": "%(levelname)s %(asctime)s [%(name)s:%(filename)s:%(funcName)s:%(lineno)d]\n%(message)s\n"
-        },
     },
     loggers={
         "": {
             "level": "INFO",
             "propagate": True,
-            "handlers": ["queue_listener"],
         },
         "starlite_bedrock": {
             "propagate": True,
