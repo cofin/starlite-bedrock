@@ -8,7 +8,7 @@ from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 from starlite.types import ResponseType
 
 from starlite_bedrock.client import HttpClient
-from starlite_bedrock.starlite import cache, compression, openapi, response
+from starlite_bedrock.starlite import cache, compression, logging, openapi, response
 from starlite_bedrock.starlite.exceptions import logging_exception_handler
 from starlite_bedrock.worker import Worker, WorkerFunction, queue
 
@@ -71,10 +71,12 @@ class Starlite(starlite.Starlite):
         ] = None,
         tags: Optional[list[str]] = None,
         template_config: Optional[starlite.config.TemplateConfig] = None,
+        log_config: Optional[starlite.logging.LoggingConfig] = None,
         db: Optional[sa.Engine] = None,
         redis: Optional[Redis] = None,
         worker_functions: list[WorkerFunction | tuple[str, WorkerFunction]] | None = None,
     ) -> None:
+        log_config = log_config or logging.log_config
         dependencies = dependencies or {}
         exception_handlers = exception_handlers or {}
         exception_handlers.setdefault(HTTP_500_INTERNAL_SERVER_ERROR, logging_exception_handler)
@@ -92,6 +94,7 @@ class Starlite(starlite.Starlite):
             on_shutdown.extend([redis.close])
 
         on_startup = on_startup or []
+        on_startup.extend([log_config.configure])
 
         # custom attributes
 
