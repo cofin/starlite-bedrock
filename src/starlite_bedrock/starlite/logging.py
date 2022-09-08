@@ -281,10 +281,6 @@ log_config = LoggingConfig(
         "standard": {"format": "%(message)s"},
     },
     loggers={
-        "": {
-            "level": "INFO",
-            "propagate": True,
-        },
         "starlite_bedrock": {
             "propagate": True,
         },
