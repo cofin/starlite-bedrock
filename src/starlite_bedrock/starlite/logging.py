@@ -270,10 +270,13 @@ log_config = LoggingConfig(
     },
     handlers={
         "console": {
-            "()": lambda: RichPicologgingHandler(markup=True, rich_tracebacks=True, omit_repeated_times=False),
+            "class": "rich.logging.RichHandler",
+            "markup": True,
+            "rich_tracebacks": True,
+            "omit_repeated_times": False,
         },
         "queue_listener": {
-            "class": "starlite.logging.picologging.QueueListenerHandler",
+            "class": "starlite.QueueListenerHandler",
             "handlers": ["cfg://handlers.console"],
         },
     },
