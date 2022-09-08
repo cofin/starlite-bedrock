@@ -16,6 +16,8 @@ from rich.traceback import Traceback
 from starlette.status import HTTP_200_OK
 from starlite import LoggingConfig
 
+from starlite_bedrock.cli import console
+
 
 class RichPicologgingHandler(logging.Handler):  # type: ignore
     """A logging handler that renders output with Rich. The time / level / message and file are displayed in columns.
@@ -270,7 +272,11 @@ log_config = LoggingConfig(
     },
     handlers={
         "console": {
-            "()": lambda: RichPicologgingHandler(markup=True, rich_tracebacks=True),
+            "()": RichPicologgingHandler,
+            "markup": True,
+            "rich_tracebacks": True,
+            "console": console,
+            "omit_repeated_times": False,
         },
         "queue_listener": {
             "class": "starlite.logging.picologging.QueueListenerHandler",
