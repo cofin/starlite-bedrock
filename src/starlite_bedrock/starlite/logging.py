@@ -308,6 +308,7 @@ log_config = LoggingConfig(
         "pydantic_openapi_schema": {
             "propagate": True,
             "level": "WARNING",
+            "handlers": ["queue_listener"],
         },
     },
 )
