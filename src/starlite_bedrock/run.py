@@ -148,6 +148,7 @@ def run_asgi(
         host=host,
         port=port,
         log_level=log_level,
+        log_config=None,
         reload=reload,
         lifespan=lifespan,
         access_log=access_log,
