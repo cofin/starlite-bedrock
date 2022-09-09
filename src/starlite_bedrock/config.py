@@ -9,6 +9,7 @@ from typing import Literal
 from pydantic import AnyUrl, PostgresDsn
 
 from starlite_bedrock.schema import BaseSchema, BaseSettings
+from starlite_bedrock.utils import text_tools
 
 
 # noinspection PyUnresolvedReferences
@@ -51,7 +52,7 @@ class AppSettings(BaseSettings):
         str
             `self.NAME`, all lowercase and hyphens instead of spaces.
         """
-        return "-".join(s.lower() for s in self.NAME.split())
+        return text_tools.slugify(self.NAME)
 
 
 # noinspection PyUnresolvedReferences
