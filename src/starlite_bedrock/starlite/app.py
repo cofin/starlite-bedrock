@@ -5,6 +5,7 @@ import sqlalchemy as sa
 import starlite
 from redis.asyncio import Redis
 from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
+from starlite.plugins.sql_alchemy import SQLAlchemyPlugin
 from starlite.types import ResponseType
 
 from starlite_bedrock.client import HttpClient
@@ -73,7 +74,6 @@ class Starlite(starlite.Starlite):
         template_config: Optional[starlite.config.TemplateConfig] = None,
         log_config: Optional[starlite.logging.LoggingConfig] = None,
         db: Optional[sa.Engine] = None,
-        redis: Optional[Redis] = None,
         worker_functions: list[WorkerFunction | tuple[str, WorkerFunction]] | None = None,
     ) -> None:
         log_config = log_config or logging.log_config
@@ -83,15 +83,16 @@ class Starlite(starlite.Starlite):
         after_exception = after_exception or []
         openapi_config = openapi_config or openapi.config
         middleware = middleware or []
-
+        plugins = plugins or []
         response_class = response_class or response.Response
 
         on_shutdown = on_shutdown or []
         on_shutdown.extend([HttpClient.close])
         if db:
             on_shutdown.extend([db.dispose])
-        if redis:
-            on_shutdown.extend([redis.close])
+            plugins.extend([SQLAlchemyPlugin()])
+        if cache_config and isinstance(cache_config.backend, Redis):
+            on_shutdown.extend([cache_config.backend.close])
 
         on_startup = on_startup or []
         on_startup.extend([log_config.configure])
@@ -101,6 +102,8 @@ class Starlite(starlite.Starlite):
         worker_functions = worker_functions or []
         # only instantiate the worker if necessary
         if worker_functions:
+            if cache_config and not isinstance(cache_config.backend, Redis):
+                raise ValueError("background functions require the use of a redis cache backend")
             worker = Worker(queue, worker_functions or [])
 
             async def worker_on_app_startup() -> None:
