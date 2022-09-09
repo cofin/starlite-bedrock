@@ -1527,7 +1527,7 @@ pyasn1 = ">=0.1.3"
 
 [[package]]
 name = "saq"
-version = "0.8.1"
+version = "0.9.0"
 description = "Distributed Python job queue with asyncio and redis"
 category = "main"
 optional = false
@@ -1543,7 +1543,7 @@ redis = [
 [package.extras]
 dev = ["black (==22.3.0)", "pylint"]
 hiredis = ["redis[hiredis] (>=4.2.0)"]
-web = ["aiohttp"]
+web = ["aiohttp", "aiohttp-basicauth"]
 
 [[package]]
 name = "setuptools"
@@ -1634,7 +1634,7 @@ sqlcipher = ["sqlcipher3_binary"]
 type = "git"
 url = "https://github.com/sqlalchemy/sqlalchemy.git"
 reference = "main"
-resolved_reference = "cc72081b0c32dbd089fb9601747f448b65414640"
+resolved_reference = "479dbc99e7fc5a60f846992c0cca8542047a8933"
 
 [[package]]
 name = "starlette"
@@ -3117,8 +3117,8 @@ rsa = [
     {file = "rsa-4.9.tar.gz", hash = "sha256:e38464a49c6c85d7f1351b0126661487a7e0a14a50f1675ec50eb34d4f20ef21"},
 ]
 saq = [
-    {file = "saq-0.8.1-py3-none-any.whl", hash = "sha256:a210da671a618ff09f482540779b89f024154b2d7bfec3153675ad4c9cbc5e99"},
-    {file = "saq-0.8.1.tar.gz", hash = "sha256:9502428bb9d38d45b9ea208d85a77ba179595fc4aa15583437c5b0c3b09040dd"},
+    {file = "saq-0.9.0-py3-none-any.whl", hash = "sha256:0056ad4d42f639eb5c2d575326ae8ce7ffdec05b8ceeafb83de6e73ccff6fec5"},
+    {file = "saq-0.9.0.tar.gz", hash = "sha256:73c316c3e7b90e6e4546dec3c4d15926d85b70a71b2fd23df78723ae6a2803e8"},
 ]
 setuptools = [
     {file = "setuptools-65.3.0-py3-none-any.whl", hash = "sha256:2e24e0bec025f035a2e72cdd1961119f557d78ad331bb00ff82efb2ab8da8e82"},
