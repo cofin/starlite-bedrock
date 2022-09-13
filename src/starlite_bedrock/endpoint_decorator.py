@@ -66,7 +66,7 @@ def _process_class(cls: Any, base_url: Any) -> Any:
         Any: _description_
     """
     if base_url is None:
-        raise RuntimeError("A decorated endpoint must define a base_url as " "@endpoint(base_url='https://foo.com').")
+        raise RuntimeError("A decorated endpoint must define a base_url as @endpoint(base_url='https://foo.com').")
     else:
         base_url = base_url.rstrip("/")
 
