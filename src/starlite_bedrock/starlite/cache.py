@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, cast
 
+from redis import RedisError
 from starlite import CacheConfig, Request
 from starlite.cache.base import CacheBackendProtocol
 from starlite.config.cache import default_cache_key_builder
@@ -116,6 +117,13 @@ class RedisAsyncioBackend(CacheBackendProtocol):  # pragma: no cover
             keys = await pipe.keys(pattern)
             deleted = await pipe.delete(*keys).execute()
             return cast("int", deleted)
+
+    async def ping(self) -> bool:
+        """Ping the Redis server."""
+        try:
+            return await redis.ping()
+        except RedisError:
+            return False
 
 
 def cache_key_builder(request: Request) -> str:
